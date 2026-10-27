@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Daily Self-Care & Med Schedule</title>
+  <title>Daily Task Manager</title>
   <style>
     :root {
       --primary: #4f46e5;
@@ -13,7 +13,7 @@
       --text: #0f172a;
       --text-muted: #64748b;
       --border: #e2e8f0;
-      --success: #10b981;
+      --danger: #ef4444;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -34,24 +34,22 @@
 
     .schedule-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; font-size: 0.85rem; color: var(--text-muted); }
 
-    .action-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 1rem; }
-    .action-btn { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 0.5rem; text-align: center; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--primary); }
-    .action-btn:active { background: #f1f5f9; }
+    .action-btn { width: 100%; background: var(--primary); color: white; border: none; border-radius: 10px; padding: 0.85rem; text-align: center; cursor: pointer; font-size: 0.95rem; font-weight: 600; margin-bottom: 1rem; }
+    .action-btn:active { background: var(--primary-hover); }
 
     .card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); padding: 1rem; margin-bottom: 1rem; }
-    .schedule-item { display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 0; border-bottom: 1px solid var(--border); }
+    .schedule-item { display: flex; align-items: flex-start; justify-content: space-between; padding: 0.85rem 0; border-bottom: 1px solid var(--border); gap: 0.75rem; }
     .schedule-item:last-child { border-bottom: none; }
     
-    .item-left { display: flex; align-items: center; gap: 0.75rem; }
-    .item-checkbox { width: 22px; height: 22px; accent-color: var(--primary); cursor: pointer; }
+    .item-left { display: flex; align-items: flex-start; gap: 0.75rem; flex: 1; }
+    .item-checkbox { width: 22px; height: 22px; accent-color: var(--primary); cursor: pointer; margin-top: 2px; }
     .item-title { font-weight: 600; font-size: 0.95rem; }
     .item-title.completed { text-decoration: line-through; color: var(--text-muted); }
-    .item-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.1rem; }
-    
-    .badge { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 4px; text-transform: uppercase; margin-right: 0.3rem; }
-    .badge-med { background: #e0e7ff; color: #3730a3; }
-    .badge-task { background: #dcfce7; color: #166534; }
-    .badge-reminder { background: #fef3c7; color: #92400e; }
+    .item-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem; }
+    .item-notes { font-size: 0.825rem; color: #475569; background: #f8fafc; padding: 0.4rem 0.6rem; border-radius: 6px; border-left: 3px solid var(--primary); margin-top: 0.4rem; }
+
+    .edit-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); cursor: pointer; }
+    .edit-btn:active { background: #f1f5f9; }
 
     .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
     .modal.active { display: flex; }
@@ -62,17 +60,17 @@
     
     .form-group { margin-bottom: 1rem; }
     .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.3rem; color: var(--text-muted); }
-    .form-group input, .form-group select { width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; }
+    .form-group input, .form-group textarea { width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; font-family: inherit; }
+    .form-group textarea { resize: vertical; min-height: 70px; }
     .form-row { display: flex; gap: 0.5rem; }
     .form-row .form-group { flex: 1; }
 
     .submit-btn { width: 100%; background: var(--primary); color: white; border: none; padding: 0.8rem; border-radius: 8px; font-weight: 600; font-size: 0.95rem; cursor: pointer; margin-top: 0.5rem; }
     .submit-btn:active { background: var(--primary-hover); }
 
+    .delete-btn { width: 100%; background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 0.6rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; margin-top: 0.5rem; }
+
     .empty-state { text-align: center; padding: 2rem 1rem; color: var(--text-muted); font-size: 0.9rem; }
-    
-    .alert-banner { background: #e0e7ff; color: #3730a3; padding: 0.75rem; border-radius: 8px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    .alert-btn { background: #4f46e5; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -89,21 +87,12 @@
   </header>
 
   <main id="tab-schedule">
-    <div id="permission-banner" class="alert-banner">
-      <span>Enable audio sounds & notifications for reminders</span>
-      <button class="alert-btn" onclick="enableAudioAndNotifications()">Enable</button>
-    </div>
-
     <div class="date-picker-bar">
       <span style="font-weight:600; font-size:0.9rem;">Selected Date:</span>
       <input type="date" id="schedule-date" onchange="renderSchedule()">
     </div>
 
-    <div class="action-grid">
-      <button class="action-btn" onclick="openModal('modal-med')">+ Medication</button>
-      <button class="action-btn" onclick="openModal('modal-task')">+ Task</button>
-      <button class="action-btn" onclick="openModal('modal-reminder')">+ Reminder</button>
-    </div>
+    <button class="action-btn" onclick="openNewTaskModal()">+ Add New Task</button>
 
     <div class="schedule-controls">
       <span>Timeline</span>
@@ -142,125 +131,49 @@
     </div>
   </main>
 
-  <!-- Medication Modal -->
-  <div class="modal" id="modal-med">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Add Medication</h3>
-        <button class="close-btn" onclick="closeModal('modal-med')">&times;</button>
-      </div>
-      <form onsubmit="saveMedication(event)">
-        <div class="form-group">
-          <label>Medication Name</label>
-          <input type="text" id="med-name" required placeholder="e.g. Ibuprofen">
-        </div>
-        <div class="form-group">
-          <label>Dose</label>
-          <input type="text" id="med-dose" placeholder="e.g. 200mg or 2 pills">
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Times Per Day</label>
-            <input type="number" id="med-freq" min="1" max="12" value="3" required>
-          </div>
-          <div class="form-group">
-            <label>Hours Apart</label>
-            <input type="number" id="med-interval" min="1" max="24" value="4" required>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>First Dose Time</label>
-            <input type="time" id="med-first-time" value="08:00" required>
-          </div>
-          <div class="form-group">
-            <label>Group (Optional)</label>
-            <input type="text" id="med-group" placeholder="e.g. Morning Meds">
-          </div>
-        </div>
-        <button type="submit" class="submit-btn">Save Medication</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Task Modal -->
+  <!-- Task Modal (Create & Edit) -->
   <div class="modal" id="modal-task">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Add Task</h3>
+        <h3 id="task-modal-title">Add Task</h3>
         <button class="close-btn" onclick="closeModal('modal-task')">&times;</button>
       </div>
       <form onsubmit="saveTask(event)">
+        <input type="hidden" id="task-edit-id" value="">
         <div class="form-group">
           <label>Task Name</label>
           <input type="text" id="task-name" required placeholder="e.g. Light Stretch">
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Duration (mins)</label>
-            <input type="number" id="task-duration" value="15" required>
-          </div>
-          <div class="form-group">
             <label>Scheduled Time</label>
             <input type="time" id="task-time" value="09:00" required>
           </div>
+          <div class="form-group">
+            <label>Duration (mins)</label>
+            <input type="number" id="task-duration" value="15" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Notes / Details (Optional)</label>
+          <textarea id="task-notes" placeholder="Add additional details, links, or instructions..."></textarea>
         </div>
         <button type="submit" class="submit-btn">Save Task</button>
+        <button type="button" id="task-delete-btn" class="delete-btn" style="display:none;" onclick="deleteActiveTask()">Delete Task</button>
       </form>
-    </div>
-  </div>
-
-  <!-- Reminder Modal -->
-  <div class="modal" id="modal-reminder">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Add Reminder</h3>
-        <button class="close-btn" onclick="closeModal('modal-reminder')">&times;</button>
-      </div>
-      <form onsubmit="saveReminder(event)">
-        <div class="form-group">
-          <label>Reminder Text</label>
-          <input type="text" id="reminder-text" required placeholder="e.g. Drink Water">
-        </div>
-        <div class="form-group">
-          <label>Time</label>
-          <input type="time" id="reminder-time" value="10:00" required>
-        </div>
-        <button type="submit" class="submit-btn">Save Reminder</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Reminder Trigger Alert Modal -->
-  <div class="modal" id="modal-alert">
-    <div class="modal-content" style="text-align:center;">
-      <div style="font-size:2.5rem; margin-bottom:0.5rem;">🔔</div>
-      <h3 id="alert-title" style="margin-bottom:0.5rem;">Reminder Alert</h3>
-      <p id="alert-sub" style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.5rem;"></p>
-      <div style="display:flex; gap:0.5rem;">
-        <button class="submit-btn" style="background:#0284c7; flex:1;" onclick="snoozeReminder(8)">Snooze (8 Mins)</button>
-        <button class="submit-btn" style="flex:1;" onclick="dismissAlert()">Dismiss</button>
-      </div>
     </div>
   </div>
 
   <script>
     const AppState = {
-      meds: JSON.parse(localStorage.getItem('care_meds') || '[]'),
       tasks: JSON.parse(localStorage.getItem('care_tasks') || '[]'),
-      reminders: JSON.parse(localStorage.getItem('care_reminders') || '[]'),
       logs: JSON.parse(localStorage.getItem('care_logs') || '[]'),
 
       save() {
-        localStorage.setItem('care_meds', JSON.stringify(this.meds));
         localStorage.setItem('care_tasks', JSON.stringify(this.tasks));
-        localStorage.setItem('care_reminders', JSON.stringify(this.reminders));
         localStorage.setItem('care_logs', JSON.stringify(this.logs));
       }
     };
-
-    let audioCtx = null;
-    let activeAlertReminder = null;
 
     function getTodayString() {
       const d = new Date();
@@ -268,51 +181,6 @@
     }
 
     document.getElementById('schedule-date').value = getTodayString();
-
-    // Enable Audio & Request Notification Permissions
-    function enableAudioAndNotifications() {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-
-      if ('Notification' in window && Notification.permission !== 'granted') {
-        Notification.requestPermission();
-      }
-
-      document.getElementById('permission-banner').style.display = 'none';
-      playDingSound();
-    }
-
-    // Audible "Ding" Sound Synthesizer
-    function playDingSound() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-
-      const now = audioCtx.currentTime;
-      
-      // First tone (E5)
-      const osc1 = audioCtx.createOscillator();
-      const gain1 = audioCtx.createGain();
-      osc1.frequency.setValueAtTime(659.25, now);
-      gain1.gain.setValueAtTime(0.3, now);
-      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-      osc1.connect(gain1);
-      gain1.connect(audioCtx.destination);
-      osc1.start(now);
-      osc1.stop(now + 0.5);
-
-      // Second tone (A5 chime)
-      const osc2 = audioCtx.createOscillator();
-      const gain2 = audioCtx.createGain();
-      osc2.frequency.setValueAtTime(880.00, now + 0.15);
-      gain2.gain.setValueAtTime(0.4, now + 0.15);
-      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
-      osc2.connect(gain2);
-      gain2.connect(audioCtx.destination);
-      osc2.start(now + 0.15);
-      osc2.stop(now + 0.8);
-    }
 
     function switchTab(tabName) {
       ['schedule', 'history', 'settings'].forEach(t => {
@@ -328,49 +196,72 @@
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-    function saveMedication(e) {
-      e.preventDefault();
-      AppState.meds.push({
-        id: 'med_' + Date.now(),
-        name: document.getElementById('med-name').value,
-        dose: document.getElementById('med-dose').value,
-        freq: parseInt(document.getElementById('med-freq').value),
-        interval: parseInt(document.getElementById('med-interval').value),
-        firstTime: document.getElementById('med-first-time').value,
-        group: document.getElementById('med-group').value.trim()
-      });
-      AppState.save();
-      closeModal('modal-med');
-      e.target.reset();
-      renderSchedule();
+    function openNewTaskModal() {
+      document.getElementById('task-modal-title').innerText = 'Add Task';
+      document.getElementById('task-edit-id').value = '';
+      document.getElementById('task-name').value = '';
+      document.getElementById('task-time').value = '09:00';
+      document.getElementById('task-duration').value = '15';
+      document.getElementById('task-notes').value = '';
+      document.getElementById('task-delete-btn').style.display = 'none';
+      openModal('modal-task');
+    }
+
+    function openEditTaskModal(taskId) {
+      const task = AppState.tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      document.getElementById('task-modal-title').innerText = 'Edit Task';
+      document.getElementById('task-edit-id').value = task.id;
+      document.getElementById('task-name').value = task.name;
+      document.getElementById('task-time').value = task.time;
+      document.getElementById('task-duration').value = task.duration || 15;
+      document.getElementById('task-notes').value = task.notes || '';
+      document.getElementById('task-delete-btn').style.display = 'block';
+      openModal('modal-task');
     }
 
     function saveTask(e) {
       e.preventDefault();
-      AppState.tasks.push({
-        id: 'task_' + Date.now(),
-        name: document.getElementById('task-name').value,
-        duration: parseInt(document.getElementById('task-duration').value),
-        time: document.getElementById('task-time').value
-      });
+      const editId = document.getElementById('task-edit-id').value;
+      const name = document.getElementById('task-name').value;
+      const time = document.getElementById('task-time').value;
+      const duration = parseInt(document.getElementById('task-duration').value) || 0;
+      const notes = document.getElementById('task-notes').value.trim();
+
+      if (editId) {
+        // Edit existing task
+        const task = AppState.tasks.find(t => t.id === editId);
+        if (task) {
+          task.name = name;
+          task.time = time;
+          task.duration = duration;
+          task.notes = notes;
+        }
+      } else {
+        // Create new task
+        AppState.tasks.push({
+          id: 'task_' + Date.now(),
+          name: name,
+          time: time,
+          duration: duration,
+          notes: notes
+        });
+      }
+
       AppState.save();
       closeModal('modal-task');
-      e.target.reset();
       renderSchedule();
     }
 
-    function saveReminder(e) {
-      e.preventDefault();
-      AppState.reminders.push({
-        id: 'rem_' + Date.now(),
-        text: document.getElementById('reminder-text').value,
-        time: document.getElementById('reminder-time').value,
-        lastTriggered: null
-      });
-      AppState.save();
-      closeModal('modal-reminder');
-      e.target.reset();
-      renderSchedule();
+    function deleteActiveTask() {
+      const editId = document.getElementById('task-edit-id').value;
+      if (editId && confirm('Are you sure you want to delete this task?')) {
+        AppState.tasks = AppState.tasks.filter(t => t.id !== editId);
+        AppState.save();
+        closeModal('modal-task');
+        renderSchedule();
+      }
     }
 
     function renderSchedule() {
@@ -381,54 +272,25 @@
 
       let items = [];
 
-      AppState.meds.forEach(med => {
-        const [h, m] = med.firstTime.split(':').map(Number);
-        for (let i = 0; i < med.freq; i++) {
-          const doseHour = (h + (i * med.interval)) % 24;
-          const timeStr = `${String(doseHour).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-          items.push({
-            id: `${med.id}_dose_${i}_${selectedDate}`,
-            type: 'med',
-            title: med.name,
-            sub: `${med.dose ? med.dose + ' • ' : ''}Dose ${i + 1} of ${med.freq}${med.group ? ' (' + med.group + ')' : ''}`,
-            time: timeStr,
-            rawMinutes: doseHour * 60 + m
-          });
-        }
-      });
-
       AppState.tasks.forEach(task => {
         const [h, m] = task.time.split(':').map(Number);
         items.push({
           id: `${task.id}_${selectedDate}`,
-          type: 'task',
+          taskId: task.id,
           title: task.name,
-          sub: `${task.duration} mins`,
           time: task.time,
+          duration: task.duration,
+          notes: task.notes || '',
           rawMinutes: h * 60 + m
         });
       });
 
-      AppState.reminders.forEach(rem => {
-        const [h, m] = rem.time.split(':').map(Number);
-        items.push({
-          id: `${rem.id}_${selectedDate}`,
-          type: 'reminder',
-          title: rem.text,
-          sub: 'Reminder',
-          time: rem.time,
-          rawMinutes: h * 60 + m,
-          rawReminder: rem
-        });
-      });
-
-      // Filter completed items if toggle is active
       if (hideCompleted) {
         items = items.filter(item => !AppState.logs.some(l => l.id === item.id && l.date === selectedDate));
       }
 
       if (items.length === 0) {
-        container.innerHTML = '<div class="empty-state">No scheduled items. Tap an option above to create one.</div>';
+        container.innerHTML = '<div class="empty-state">No tasks scheduled. Tap "+ Add New Task" above to get started.</div>';
         return;
       }
 
@@ -440,15 +302,14 @@
         div.className = 'schedule-item';
         div.innerHTML = `
           <div class="item-left">
-            <input type="checkbox" class="item-checkbox" ${isLogged ? 'checked' : ''} onchange="toggleCheck('${item.id}', '${item.title}', '${selectedDate}', this.checked)">
-            <div>
+            <input type="checkbox" class="item-checkbox" ${isLogged ? 'checked' : ''} onchange="toggleCheck('${item.id}', '${item.title.replace(/'/g, "\\'")}', '${selectedDate}', this.checked)">
+            <div style="flex:1;">
               <div class="item-title ${isLogged ? 'completed' : ''}">${item.title}</div>
-              <div class="item-sub">
-                <span class="badge badge-${item.type}">${item.type}</span>
-                ${item.time} ${item.sub ? '• ' + item.sub : ''}
-              </div>
+              <div class="item-sub">${item.time}${item.duration ? ' • ' + item.duration + ' mins' : ''}</div>
+              ${item.notes ? `<div class="item-notes">${item.notes}</div>` : ''}
             </div>
           </div>
+          <button class="edit-btn" onclick="openEditTaskModal('${item.taskId}')">Edit</button>
         `;
         container.appendChild(div);
       });
@@ -467,59 +328,6 @@
       }
       AppState.save();
       renderSchedule();
-    }
-
-    // Reminder Timer Engine (Evaluates due reminders every 15 seconds)
-    function checkDueReminders() {
-      const now = new Date();
-      const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      const today = getTodayString();
-
-      AppState.reminders.forEach(rem => {
-        if (rem.time === currentHHMM && rem.lastTriggered !== `${today}_${currentHHMM}`) {
-          rem.lastTriggered = `${today}_${currentHHMM}`;
-          AppState.save();
-          triggerReminderAlert(rem);
-        }
-      });
-    }
-
-    function triggerReminderAlert(rem) {
-      activeAlertReminder = rem;
-
-      // Play Sound
-      playDingSound();
-
-      // Show System Notification if permitted
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification("Care Daily Reminder", { body: rem.text });
-      }
-
-      // Show In-App Modal Alert
-      document.getElementById('alert-title').innerText = rem.text;
-      document.getElementById('alert-sub').innerText = `Scheduled for ${rem.time}`;
-      openModal('modal-alert');
-    }
-
-    function snoozeReminder(minutes) {
-      if (!activeAlertReminder) return;
-
-      const [h, m] = activeAlertReminder.time.split(':').map(Number);
-      const d = new Date();
-      d.setHours(h, m + minutes, 0, 0);
-
-      const snoozedHHMM = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-      activeAlertReminder.time = snoozedHHMM;
-      AppState.save();
-
-      closeModal('modal-alert');
-      activeAlertReminder = null;
-      renderSchedule();
-    }
-
-    function dismissAlert() {
-      closeModal('modal-alert');
-      activeAlertReminder = null;
     }
 
     function renderHistory() {
@@ -551,7 +359,7 @@
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(AppState, null, 2));
       const a = document.createElement('a');
       a.href = dataStr;
-      a.download = `care_daily_backup_${getTodayString()}.json`;
+      a.download = `care_daily_tasks_backup_${getTodayString()}.json`;
       a.click();
     }
 
@@ -560,10 +368,8 @@
       reader.onload = function(event) {
         try {
           const imported = JSON.parse(event.target.result);
-          if (imported.meds && imported.tasks) {
-            AppState.meds = imported.meds || [];
+          if (imported.tasks) {
             AppState.tasks = imported.tasks || [];
-            AppState.reminders = imported.reminders || [];
             AppState.logs = imported.logs || [];
             AppState.save();
             renderSchedule();
@@ -577,18 +383,13 @@
     }
 
     function clearAllData() {
-      if (confirm('Are you sure you want to clear all medications, tasks, and history?')) {
+      if (confirm('Are you sure you want to clear all tasks and history?')) {
         localStorage.clear();
-        AppState.meds = [];
         AppState.tasks = [];
-        AppState.reminders = [];
         AppState.logs = [];
         renderSchedule();
       }
     }
-
-    // Check due reminders every 15 seconds
-    setInterval(checkDueReminders, 15000);
 
     renderSchedule();
   </script>
