@@ -2,863 +2,472 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Anna's Daily Self-Care & Medication Schedule</title>
-  <!-- Tailwind CSS via CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Phosphor Icons for SVG UI icons -->
-  <script src="https://unpkg.com/@phosphor-icons/web"></script>
-  <!-- Google Fonts Inter -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Inter', 'sans-serif'] },
-          colors: {
-            med: { light: '#f0fdf4', border: '#bbf7d0', text: '#166534', badge: '#22c55e' },
-            task: { light: '#eff6ff', border: '#bfdbfe', text: '#1e40af', badge: '#3b82f6' },
-            rem: { light: '#fffbebe', border: '#fde68a', text: '#92400e', badge: '#f59e0b' }
-          }
-        }
-      }
-    }
-  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Daily Self-Care & Med Schedule</title>
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
-    /* Custom scrollbar for clean visual appearance */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #f1f5f9; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-    .modal-backdrop { background-color: rgba(15, 23, 42, 0.55); backdrop-filter: blur(4px); }
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success: #10b981;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); padding-bottom: 60px; }
+    
+    header { background: var(--card-bg); border-bottom: 1px solid var(--border); padding: 1rem; position: sticky; top: 0; z-index: 10; }
+    .header-content { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+    h1 { font-size: 1.25rem; font-weight: 700; color: var(--primary); }
+    
+    .nav-tabs { display: flex; gap: 0.5rem; background: #f1f5f9; padding: 0.25rem; border-radius: 8px; }
+    .tab-btn { border: none; background: transparent; padding: 0.4rem 0.8rem; font-size: 0.85rem; font-weight: 600; border-radius: 6px; color: var(--text-muted); cursor: pointer; }
+    .tab-btn.active { background: var(--card-bg); color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+    main { max-width: 600px; margin: 1rem auto; padding: 0 1rem; }
+    
+    .date-picker-bar { display: flex; align-items: center; justify-content: space-between; background: var(--card-bg); padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 1rem; }
+    .date-picker-bar input { border: 1px solid var(--border); padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
+
+    .action-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 1rem; }
+    .action-btn { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 0.5rem; text-align: center; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--primary); }
+    .action-btn:active { background: #f1f5f9; }
+
+    .card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); padding: 1rem; margin-bottom: 1rem; }
+    .schedule-item { display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 0; border-bottom: 1px solid var(--border); }
+    .schedule-item:last-child { border-bottom: none; }
+    
+    .item-left { display: flex; align-items: center; gap: 0.75rem; }
+    .item-checkbox { width: 22px; height: 22px; accent-color: var(--primary); cursor: pointer; }
+    .item-title { font-weight: 600; font-size: 0.95rem; }
+    .item-title.completed { text-decoration: line-through; color: var(--text-muted); }
+    .item-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.1rem; }
+    
+    .badge { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 4px; text-transform: uppercase; margin-right: 0.3rem; }
+    .badge-med { background: #e0e7ff; color: #3730a3; }
+    .badge-task { background: #dcfce7; color: #166534; }
+    .badge-reminder { background: #fef3c7; color: #92400e; }
+
+    /* Modal styling */
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
+    .modal.active { display: flex; }
+    .modal-content { background: var(--card-bg); width: 100%; max-width: 480px; border-radius: 16px; padding: 1.25rem; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .modal-header h3 { font-size: 1.1rem; }
+    .close-btn { background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; }
+    
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.3rem; color: var(--text-muted); }
+    .form-group input, .form-group select { width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; }
+    .form-row { display: flex; gap: 0.5rem; }
+    .form-row .form-group { flex: 1; }
+
+    .submit-btn { width: 100%; background: var(--primary); color: white; border: none; padding: 0.8rem; border-radius: 8px; font-weight: 600; font-size: 0.95rem; cursor: pointer; margin-top: 0.5rem; }
+    .submit-btn:active { background: var(--primary-hover); }
+
+    .empty-state { text-align: center; padding: 2rem 1rem; color: var(--text-muted); font-size: 0.9rem; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between text-slate-800">
+<body>
 
-  <!-- TOP HEADER NAV -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-    <div class="max-w-4xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-2">
-        <div class="bg-indigo-600 text-white p-2 rounded-xl flex items-center justify-center shadow-md">
-          <i class="ph-bold ph-heartbeat text-2xl"></i>
-        </div>
-        <div>
-          <h1 class="font-bold text-lg leading-tight text-slate-900">Daily Care & Meds</h1>
-          <p class="text-xs text-slate-500 font-medium" id="current-date-display">Today</p>
-        </div>
+  <header>
+    <div class="header-content">
+      <h1>Care Daily</h1>
+      <div class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('schedule')">Schedule</button>
+        <button class="tab-btn" onclick="switchTab('history')">History</button>
+        <button class="tab-btn" onclick="switchTab('settings')">Data</button>
       </div>
-
-      <!-- Quick Actions -->
-      <div class="flex items-center gap-2">
-        <button onclick="openModal('med-modal')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold px-3 py-2 rounded-lg text-sm border border-emerald-200 flex items-center gap-1.5 transition">
-          <i class="ph-bold ph-pill text-base"></i>
-          <span class="hidden sm:inline">+ Med</span>
-        </button>
-        <button onclick="openModal('task-modal')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold px-3 py-2 rounded-lg text-sm border border-blue-200 flex items-center gap-1.5 transition">
-          <i class="ph-bold ph-check-square text-base"></i>
-          <span class="hidden sm:inline">+ Task</span>
-        </button>
-        <button onclick="openModal('reminder-modal')" class="bg-amber-50 hover:bg-amber-100 text-amber-700 font-semibold px-3 py-2 rounded-lg text-sm border border-amber-200 flex items-center gap-1.5 transition">
-          <i class="ph-bold ph-bell text-base"></i>
-          <span class="hidden sm:inline">+ Reminder</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- View Switcher Tabs -->
-    <div class="max-w-4xl mx-auto px-4 flex border-t border-slate-100">
-      <button id="tab-schedule" onclick="switchTab('schedule')" class="flex-1 py-2.5 text-sm font-semibold text-center border-b-2 border-indigo-600 text-indigo-600 flex items-center justify-center gap-2">
-        <i class="ph-bold ph-calendar-blank text-base"></i> Daily Schedule
-      </button>
-      <button id="tab-history" onclick="switchTab('history')" class="flex-1 py-2.5 text-sm font-semibold text-center border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-2">
-        <i class="ph-bold ph-clock-counter-clockwise text-base"></i> History & Search
-      </button>
     </div>
   </header>
 
-  <!-- MAIN CONTAINER -->
-  <main class="max-w-4xl mx-auto w-full px-4 py-6 flex-grow">
+  <main id="tab-schedule">
+    <div class="date-picker-bar">
+      <span style="font-weight:600; font-size:0.9rem;">Selected Date:</span>
+      <input type="date" id="schedule-date" onchange="renderSchedule()">
+    </div>
 
-    <!-- SCHEDULE VIEW -->
-    <section id="view-schedule" class="space-y-4">
-      <!-- Date Picker & Filter Controls -->
-      <div class="bg-white p-3 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-3 shadow-sm">
-        <div class="flex items-center gap-2">
-          <label for="schedule-date-picker" class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Viewing Date:</label>
-          <input type="date" id="schedule-date-picker" onchange="renderSchedule()" class="border border-slate-300 rounded-lg px-2.5 py-1 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-          <button onclick="setDateToToday()" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold underline px-1">Today</button>
-        </div>
-        <div class="flex items-center gap-1 text-xs">
-          <span class="text-slate-400">Total:</span>
-          <span id="stat-total" class="font-bold text-slate-700">0</span>
-          <span class="text-slate-300 mx-1">|</span>
-          <span class="text-emerald-600 font-medium">Done:</span>
-          <span id="stat-done" class="font-bold text-emerald-600">0</span>
-        </div>
-      </div>
+    <div class="action-grid">
+      <button class="action-btn" onclick="openModal('modal-med')">+ Medication</button>
+      <button class="action-btn" onclick="openModal('modal-task')">+ Task</button>
+      <button class="action-btn" onclick="openModal('modal-reminder')">+ Reminder</button>
+    </div>
 
-      <!-- Schedule Items List Container -->
-      <div id="schedule-container" class="space-y-3">
-        <!-- Rendered dynamically -->
-      </div>
-    </section>
-
-    <!-- HISTORY & SEARCH VIEW -->
-    <section id="view-history" class="space-y-4 hidden">
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-        <div class="flex flex-col sm:flex-row gap-3">
-          <div class="relative flex-grow">
-            <i class="ph-bold ph-magnifying-glass absolute left-3 top-3 text-slate-400 text-lg"></i>
-            <input type="text" id="history-search-input" onkeyup="renderHistory()" placeholder="Search completed meds or tasks (e.g. 'Ibuprofen')..." class="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-          </div>
-          <select id="history-type-filter" onchange="renderHistory()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
-            <option value="all">All Types</option>
-            <option value="medication">Medications Only</option>
-            <option value="task">Tasks Only</option>
-            <option value="reminder">Reminders Only</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- History Log List -->
-      <div id="history-container" class="space-y-2">
-        <!-- Rendered dynamically -->
-      </div>
-    </section>
+    <div class="card">
+      <div id="schedule-list"></div>
+    </div>
   </main>
 
-  <!-- FOOTER -->
-  <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400">
-    <div class="max-w-4xl mx-auto px-4 flex flex-wrap justify-between items-center gap-2">
-      <span>Daily Self-Care Planner &bull; Client-Side Data Storage</span>
-      <div class="space-x-3">
-        <button onclick="exportData()" class="hover:text-slate-600 underline">Backup Data (JSON)</button>
-        <button onclick="importDataPrompt()" class="hover:text-slate-600 underline">Restore Data</button>
+  <main id="tab-history" style="display:none;">
+    <div class="card">
+      <div class="form-group" style="margin-bottom:0.5rem;">
+        <input type="text" id="history-search" placeholder="Search completed logs..." oninput="renderHistory()">
       </div>
     </div>
-  </footer>
+    <div class="card">
+      <div id="history-list"></div>
+    </div>
+  </main>
 
-  <!-- ==================== MODALS ==================== -->
+  <main id="tab-settings" style="display:none;">
+    <div class="card">
+      <h3 style="margin-bottom: 0.75rem; font-size: 1rem;">Data Management</h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Your routine data is stored locally in Safari. Use export to keep backups.
+      </p>
+      <button class="submit-btn" style="background:#0284c7; margin-top:0;" onclick="exportData()">Export Data (JSON)</button>
+      <button class="submit-btn" style="background:#64748b; margin-top:0.5rem;" onclick="document.getElementById('import-file').click()">Import Data (JSON)</button>
+      <input type="file" id="import-file" style="display:none" accept=".json" onchange="importData(event)">
+      <button class="submit-btn" style="background:#ef4444; margin-top:1.5rem;" onclick="clearAllData()">Clear All Data</button>
+    </div>
+  </main>
 
-  <!-- MEDICATION MODAL -->
-  <div id="med-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 transform transition-all space-y-4">
-      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-        <h3 class="font-bold text-slate-800 flex items-center gap-2 text-base">
-          <i class="ph-bold ph-pill text-emerald-600 text-xl"></i> Add New Medication
-        </h3>
-        <button onclick="closeModal('med-modal')" class="text-slate-400 hover:text-slate-600 p-1"><i class="ph-bold ph-x text-lg"></i></button>
+  <!-- Medication Modal -->
+  <div class="modal" id="modal-med">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add Medication</h3>
+        <button class="close-btn" onclick="closeModal('modal-med')">&times;</button>
       </div>
-      <form id="med-form" onsubmit="handleSaveMedication(event)" class="space-y-3">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Medication Name</label>
-          <input type="text" id="med-name" required placeholder="e.g. Ibuprofen / Vitamin D" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+      <form onsubmit="saveMedication(event)">
+        <div class="form-group">
+          <label>Medication Name</label>
+          <input type="text" id="med-name" required placeholder="e.g. Ibuprofen">
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Dose / Strength</label>
-            <input type="text" id="med-dose" required placeholder="e.g. 200mg / 1 tablet" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Frequency (times/day)</label>
-            <input type="number" id="med-freq" min="1" max="12" value="3" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-          </div>
+        <div class="form-group">
+          <label>Dose</label>
+          <input type="text" id="med-dose" placeholder="e.g. 200mg or 2 pills">
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Hours Apart</label>
-            <input type="number" id="med-interval" min="1" max="24" value="4" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Times Per Day</label>
+            <input type="number" id="med-freq" min="1" max="12" value="3" required>
           </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">First Dose Time</label>
-            <input type="time" id="med-first-time" value="08:00" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+          <div class="form-group">
+            <label>Hours Apart</label>
+            <input type="number" id="med-interval" min="1" max="24" value="4" required>
           </div>
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Group Name (Optional)</label>
-          <input type="text" id="med-group" placeholder="e.g. Morning Meds / Post-Op Stack" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-          <p class="text-[11px] text-slate-400 mt-1">Meds in the same group shift together if dose time changes.</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label>First Dose Time</label>
+            <input type="time" id="med-first-time" value="08:00" required>
+          </div>
+          <div class="form-group">
+            <label>Group (Optional)</label>
+            <input type="text" id="med-group" placeholder="e.g. Morning Meds">
+          </div>
         </div>
-        <div class="pt-2 flex justify-end gap-2">
-          <button type="button" onclick="closeModal('med-modal')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancel</button>
-          <button type="submit" class="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow-sm">Save Medication</button>
-        </div>
+        <button type="submit" class="submit-btn">Save Medication</button>
       </form>
     </div>
   </div>
 
-  <!-- TASK MODAL -->
-  <div id="task-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 space-y-4">
-      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-        <h3 class="font-bold text-slate-800 flex items-center gap-2 text-base">
-          <i class="ph-bold ph-check-square text-blue-600 text-xl"></i> Add Daily Task
-        </h3>
-        <button onclick="closeModal('task-modal')" class="text-slate-400 hover:text-slate-600 p-1"><i class="ph-bold ph-x text-lg"></i></button>
+  <!-- Task Modal -->
+  <div class="modal" id="modal-task">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add Task</h3>
+        <button class="close-btn" onclick="closeModal('modal-task')">&times;</button>
       </div>
-      <form id="task-form" onsubmit="handleSaveTask(event)" class="space-y-3">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Task Title</label>
-          <input type="text" id="task-title" required placeholder="e.g. Morning Stretch / Hydrate" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+      <form onsubmit="saveTask(event)">
+        <div class="form-group">
+          <label>Task Name</label>
+          <input type="text" id="task-name" required placeholder="e.g. Light Stretch">
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Expected Time (mins)</label>
-            <input type="number" id="task-duration" min="1" max="480" value="15" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Duration (mins)</label>
+            <input type="number" id="task-duration" value="15" required>
           </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Scheduled Time</label>
-            <input type="time" id="task-time" value="09:00" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          <div class="form-group">
+            <label>Scheduled Time</label>
+            <input type="time" id="task-time" value="09:00" required>
           </div>
         </div>
-        <div class="flex items-center gap-2 pt-1">
-          <input type="checkbox" id="task-repeat" checked class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
-          <label for="task-repeat" class="text-xs font-medium text-slate-700">Repeat Automatically Daily</label>
-        </div>
-        <div class="pt-2 flex justify-end gap-2">
-          <button type="button" onclick="closeModal('task-modal')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancel</button>
-          <button type="submit" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm">Save Task</button>
-        </div>
+        <button type="submit" class="submit-btn">Save Task</button>
       </form>
     </div>
   </div>
 
-  <!-- REMINDER MODAL -->
-  <div id="reminder-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 space-y-4">
-      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-        <h3 class="font-bold text-slate-800 flex items-center gap-2 text-base">
-          <i class="ph-bold ph-bell text-amber-600 text-xl"></i> Add Sound Reminder
-        </h3>
-        <button onclick="closeModal('reminder-modal')" class="text-slate-400 hover:text-slate-600 p-1"><i class="ph-bold ph-x text-lg"></i></button>
+  <!-- Reminder Modal -->
+  <div class="modal" id="modal-reminder">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add Reminder</h3>
+        <button class="close-btn" onclick="closeModal('modal-reminder')">&times;</button>
       </div>
-      <form id="reminder-form" onsubmit="handleSaveReminder(event)" class="space-y-3">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Reminder Message</label>
-          <input type="text" id="rem-text" required placeholder="e.g. Drink full glass of water" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+      <form onsubmit="saveReminder(event)">
+        <div class="form-group">
+          <label>Reminder Text</label>
+          <input type="text" id="reminder-text" required placeholder="e.g. Drink Water">
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Target Alert Time</label>
-          <input type="time" id="rem-time" value="12:00" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
+        <div class="form-group">
+          <label>Time</label>
+          <input type="time" id="reminder-time" value="10:00" required>
         </div>
-        <div class="flex items-center gap-2 pt-1">
-          <input type="checkbox" id="rem-repeat" checked class="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500">
-          <label for="rem-repeat" class="text-xs font-medium text-slate-700">Repeat Automatically Daily</label>
-        </div>
-        <div class="pt-2 flex justify-end gap-2">
-          <button type="button" onclick="closeModal('reminder-modal')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancel</button>
-          <button type="submit" class="px-4 py-2 text-sm bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg shadow-sm">Save Reminder</button>
-        </div>
+        <button type="submit" class="submit-btn">Save Reminder</button>
       </form>
     </div>
   </div>
 
-  <!-- EDIT / SHIFT DOSE TIME MODAL -->
-  <div id="shift-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 space-y-4">
-      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-        <h3 class="font-bold text-slate-800 flex items-center gap-2 text-base">
-          <i class="ph-bold ph-clock text-indigo-600 text-xl"></i> Shift Time / Dose Schedule
-        </h3>
-        <button onclick="closeModal('shift-modal')" class="text-slate-400 hover:text-slate-600 p-1"><i class="ph-bold ph-x text-lg"></i></button>
-      </div>
-      <div class="space-y-3">
-        <p class="text-xs text-slate-600" id="shift-item-description">Adjusting time for item...</p>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">New Time</label>
-          <input type="time" id="shift-new-time" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-        </div>
-        <div id="shift-options-container" class="space-y-2 pt-1">
-          <!-- Dynamically populated group shift choices -->
-        </div>
-        <div class="pt-2 flex justify-end gap-2">
-          <button type="button" onclick="closeModal('shift-modal')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancel</button>
-          <button type="button" onclick="executeShiftTime()" class="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-sm">Confirm Shift</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- APPLICATION LOGIC & STATE ENGINE -->
   <script>
-    // Global State Store
-    const State = {
-      medications: [],
-      tasks: [],
-      reminders: [],
-      scheduleOccurrences: [], // Generated or customized items for specific dates
-      logs: [] // Completed history records
+    // App State Management
+    const AppState = {
+      meds: JSON.parse(localStorage.getItem('care_meds') || '[]'),
+      tasks: JSON.parse(localStorage.getItem('care_tasks') || '[]'),
+      reminders: JSON.parse(localStorage.getItem('care_reminders') || '[]'),
+      logs: JSON.parse(localStorage.getItem('care_logs') || '[]'),
+
+      save() {
+        localStorage.setItem('care_meds', JSON.stringify(this.meds));
+        localStorage.setItem('care_tasks', JSON.stringify(this.tasks));
+        localStorage.setItem('care_reminders', JSON.stringify(this.reminders));
+        localStorage.setItem('care_logs', JSON.stringify(this.logs));
+      }
     };
 
-    let activeShiftContext = null;
-
-    // Initialization
-    window.onload = function() {
-      loadStorage();
-      setDateToToday();
-      setupNotifications();
-      startReminderChecker();
-    };
-
-    function loadStorage() {
-      try {
-        State.medications = JSON.parse(localStorage.getItem('care_meds') || '[]');
-        State.tasks = JSON.parse(localStorage.getItem('care_tasks') || '[]');
-        State.reminders = JSON.parse(localStorage.getItem('care_reminders') || '[]');
-        State.scheduleOccurrences = JSON.parse(localStorage.getItem('care_schedule') || '[]');
-        State.logs = JSON.parse(localStorage.getItem('care_logs') || '[]');
-      } catch (e) {
-        console.error("Failed to parse localStorage:", e);
-      }
+    // Helper: Safely format date as YYYY-MM-DD
+    function getTodayString() {
+      const d = new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     }
 
-    function saveStorage() {
-      localStorage.setItem('care_meds', JSON.stringify(State.medications));
-      localStorage.setItem('care_tasks', JSON.stringify(State.tasks));
-      localStorage.setItem('care_reminders', JSON.stringify(State.reminders));
-      localStorage.setItem('care_schedule', JSON.stringify(State.scheduleOccurrences));
-      localStorage.setItem('care_logs', JSON.stringify(State.logs));
-    }
+    // Set default date input on launch
+    document.getElementById('schedule-date').value = getTodayString();
 
-    function setDateToToday() {
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById('schedule-date-picker').value = today;
-      document.getElementById('current-date-display').innerText = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      renderSchedule();
-    }
-
-    // Modal Control Helpers
-    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-
-    // Tab Navigation
-    function switchTab(tab) {
-      const schView = document.getElementById('view-schedule');
-      const histView = document.getElementById('view-history');
-      const schTab = document.getElementById('tab-schedule');
-      const histTab = document.getElementById('tab-history');
-
-      if (tab === 'schedule') {
-        schView.classList.remove('hidden');
-        histView.classList.add('hidden');
-        schTab.className = 'flex-1 py-2.5 text-sm font-semibold text-center border-b-2 border-indigo-600 text-indigo-600 flex items-center justify-center gap-2';
-        histTab.className = 'flex-1 py-2.5 text-sm font-semibold text-center border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-2';
-        renderSchedule();
-      } else {
-        schView.classList.add('hidden');
-        histView.classList.remove('hidden');
-        histTab.className = 'flex-1 py-2.5 text-sm font-semibold text-center border-b-2 border-indigo-600 text-indigo-600 flex items-center justify-center gap-2';
-        schTab.className = 'flex-1 py-2.5 text-sm font-semibold text-center border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-2';
-        renderHistory();
-      }
-    }
-
-    // Helper: Add Minutes to HH:MM time string
-    function addMinutesToTime(timeStr, minsToAdd) {
-      const [h, m] = timeStr.split(':').map(Number);
-      const date = new Date(2026, 0, 1, h, m);
-      date.setMinutes(date.getMinutes() + minsToAdd);
-      const newH = String(date.getHours()).padStart(2, '0');
-      const newM = String(date.getMinutes()).padStart(2, '0');
-      return `${newH}:${newM}`;
-    }
-
-    // Helper: Calculate Minutes Difference (timeB - timeA)
-    function getTimeDifferenceMinutes(timeA, timeB) {
-      const [hA, mA] = timeA.split(':').map(Number);
-      const [hB, mB] = timeB.split(':').map(Number);
-      return (hB * 60 + mB) - (hA * 60 + mA);
-    }
-
-    // Helper: Format HH:MM to 12-hour AM/PM
-    function formatTime12H(timeStr) {
-      if (!timeStr) return '';
-      const [h, m] = timeStr.split(':').map(Number);
-      const period = h >= 12 ? 'PM' : 'AM';
-      const formattedH = h % 12 === 0 ? 12 : h % 12;
-      return `${formattedH}:${String(m).padStart(2, '0')} ${period}`;
-    }
-
-    // CREATE MEDICATION HANDLER
-    function handleSaveMedication(e) {
-      e.preventDefault();
-      const name = document.getElementById('med-name').value.trim();
-      const dose = document.getElementById('med-dose').value.trim();
-      const freq = parseInt(document.getElementById('med-freq').value, 10);
-      const interval = parseInt(document.getElementById('med-interval').value, 10);
-      const firstTime = document.getElementById('med-first-time').value;
-      const group = document.getElementById('med-group').value.trim();
-
-      const medId = 'med_' + Date.now();
-      const newMed = { id: medId, name, dose, frequency: freq, intervalHours: interval, firstDoseTime: firstTime, groupName: group };
-      State.medications.push(newMed);
-      saveStorage();
-
-      closeModal('med-modal');
-      document.getElementById('med-form').reset();
-      renderSchedule();
-    }
-
-    // CREATE TASK HANDLER
-    function handleSaveTask(e) {
-      e.preventDefault();
-      const title = document.getElementById('task-title').value.trim();
-      const duration = parseInt(document.getElementById('task-duration').value, 10);
-      const time = document.getElementById('task-time').value;
-      const repeat = document.getElementById('task-repeat').checked;
-
-      const taskId = 'task_' + Date.now();
-      const newTask = { id: taskId, title, durationMinutes: duration, time, repeatDaily: repeat };
-      State.tasks.push(newTask);
-      saveStorage();
-
-      closeModal('task-modal');
-      document.getElementById('task-form').reset();
-      renderSchedule();
-    }
-
-    // CREATE REMINDER HANDLER
-    function handleSaveReminder(e) {
-      e.preventDefault();
-      const text = document.getElementById('rem-text').value.trim();
-      const time = document.getElementById('rem-time').value;
-      const repeat = document.getElementById('rem-repeat').checked;
-
-      const remId = 'rem_' + Date.now();
-      const newRem = { id: remId, text, time, repeatDaily: repeat };
-      State.reminders.push(newRem);
-      saveStorage();
-
-      closeModal('reminder-modal');
-      document.getElementById('reminder-form').reset();
-      renderSchedule();
-    }
-
-    // GENERATE SCHEDULE FOR SPECIFIC DATE
-    function generateOccurrencesForDate(selectedDate) {
-      // Find items already explicitly stored for this date
-      const existingForDate = State.scheduleOccurrences.filter(o => o.date === selectedDate);
-      
-      let generated = [...existingForDate];
-
-      // 1. Process Medications
-      State.medications.forEach(med => {
-        for (let i = 0; i < med.frequency; i++) {
-          const doseIndex = i + 1;
-          const occId = `occ_${med.id}_${selectedDate}_dose_${doseIndex}`;
-          
-          if (!generated.some(g => g.id === occId)) {
-            const calculatedTime = addMinutesToTime(med.firstDoseTime, i * med.intervalHours * 60);
-            generated.push({
-              id: occId,
-              date: selectedDate,
-              refId: med.id,
-              type: 'medication',
-              title: med.name,
-              details: `${med.dose} (Dose ${doseIndex} of ${med.frequency})`,
-              time: calculatedTime,
-              doseIndex: doseIndex,
-              groupName: med.groupName || '',
-              completed: false
-            });
-          }
-        }
+    function switchTab(tabName) {
+      ['schedule', 'history', 'settings'].forEach(t => {
+        document.getElementById(`tab-${t}`).style.display = t === tabName ? 'block' : 'none';
       });
-
-      // 2. Process Daily Tasks
-      State.tasks.forEach(task => {
-        const occId = `occ_${task.id}_${selectedDate}`;
-        if (!generated.some(g => g.id === occId) && task.repeatDaily) {
-          generated.push({
-            id: occId,
-            date: selectedDate,
-            refId: task.id,
-            type: 'task',
-            title: task.title,
-            details: `Est. ${task.durationMinutes} mins`,
-            time: task.time,
-            completed: false
-          });
-        }
+      document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
+        btn.classList.toggle('active', ['schedule', 'history', 'settings'][idx] === tabName);
       });
-
-      // 3. Process Reminders
-      State.reminders.forEach(rem => {
-        const occId = `occ_${rem.id}_${selectedDate}`;
-        if (!generated.some(g => g.id === occId) && rem.repeatDaily) {
-          generated.push({
-            id: occId,
-            date: selectedDate,
-            refId: rem.id,
-            type: 'reminder',
-            title: rem.text,
-            details: 'Sound Alert',
-            time: rem.time,
-            completed: false
-          });
-        }
-      });
-
-      // Sort chronologically by time
-      generated.sort((a, b) => a.time.localeCompare(b.time));
-      return generated;
+      if (tabName === 'schedule') renderSchedule();
+      if (tabName === 'history') renderHistory();
     }
 
-    // RENDER SCHEDULE VIEW
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    // Save Handlers
+    function saveMedication(e) {
+      e.preventDefault();
+      const med = {
+        id: 'med_' + Date.now(),
+        name: document.getElementById('med-name').value,
+        dose: document.getElementById('med-dose').value,
+        freq: parseInt(document.getElementById('med-freq').value),
+        interval: parseInt(document.getElementById('med-interval').value),
+        firstTime: document.getElementById('med-first-time').value,
+        group: document.getElementById('med-group').value.trim()
+      };
+      AppState.meds.push(med);
+      AppState.save();
+      closeModal('modal-med');
+      e.target.reset();
+      renderSchedule();
+    }
+
+    function saveTask(e) {
+      e.preventDefault();
+      const task = {
+        id: 'task_' + Date.now(),
+        name: document.getElementById('task-name').value,
+        duration: parseInt(document.getElementById('task-duration').value),
+        time: document.getElementById('task-time').value
+      };
+      AppState.tasks.push(task);
+      AppState.save();
+      closeModal('modal-task');
+      e.target.reset();
+      renderSchedule();
+    }
+
+    function saveReminder(e) {
+      e.preventDefault();
+      const reminder = {
+        id: 'rem_' + Date.now(),
+        text: document.getElementById('reminder-text').value,
+        time: document.getElementById('reminder-time').value
+      };
+      AppState.reminders.push(reminder);
+      AppState.save();
+      closeModal('modal-reminder');
+      e.target.reset();
+      renderSchedule();
+    }
+
+    // Render Daily Schedule
     function renderSchedule() {
-      const selectedDate = document.getElementById('schedule-date-picker').value;
-      const container = document.getElementById('schedule-container');
-      const items = generateOccurrencesForDate(selectedDate);
+      const selectedDate = document.getElementById('schedule-date').value || getTodayString();
+      const container = document.getElementById('schedule-list');
+      container.innerHTML = '';
 
-      // Stats
-      const doneCount = items.filter(i => i.completed).length;
-      document.getElementById('stat-total').innerText = items.length;
-      document.getElementById('stat-done').innerText = doneCount;
+      let items = [];
+
+      // Generate Medication Doses
+      AppState.meds.forEach(med => {
+        const [h, m] = med.firstTime.split(':').map(Number);
+        for (let i = 0; i < med.freq; i++) {
+          const doseHour = (h + (i * med.interval)) % 24;
+          const timeStr = `${String(doseHour).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+          const itemId = `${med.id}_dose_${i}_${selectedDate}`;
+          
+          items.push({
+            id: itemId,
+            type: 'med',
+            title: med.name,
+            sub: `${med.dose ? med.dose + ' • ' : ''}Dose ${i + 1} of ${med.freq}${med.group ? ' (' + med.group + ')' : ''}`,
+            time: timeStr,
+            rawMinutes: doseHour * 60 + m
+          });
+        }
+      });
+
+      // Generate Tasks
+      AppState.tasks.forEach(task => {
+        const [h, m] = task.time.split(':').map(Number);
+        items.push({
+          id: `${task.id}_${selectedDate}`,
+          type: 'task',
+          title: task.name,
+          sub: `${task.duration} mins`,
+          time: task.time,
+          rawMinutes: h * 60 + m
+        });
+      });
+
+      // Generate Reminders
+      AppState.reminders.forEach(rem => {
+        const [h, m] = rem.time.split(':').map(Number);
+        items.push({
+          id: `${rem.id}_${selectedDate}`,
+          type: 'reminder',
+          title: rem.text,
+          sub: 'Reminder',
+          time: rem.time,
+          rawMinutes: h * 60 + m
+        });
+      });
 
       if (items.length === 0) {
-        container.innerHTML = `
-          <div class="bg-white p-8 text-center rounded-xl border border-slate-200">
-            <i class="ph-duotone ph-calendar-x text-4xl text-slate-300 mb-2"></i>
-            <p class="text-sm font-medium text-slate-500">No items scheduled for this date.</p>
-            <p class="text-xs text-slate-400 mt-1">Click the buttons above to add medications, tasks, or reminders.</p>
-          </div>
-        `;
+        container.innerHTML = '<div class="empty-state">No scheduled items. Tap an option above to create one.</div>';
         return;
       }
 
-      container.innerHTML = items.map(item => {
-        let badgeStyle = "bg-blue-100 text-blue-800 border-blue-200";
-        let icon = "ph-check-square";
-        
-        if (item.type === 'medication') {
-          badgeStyle = "bg-emerald-100 text-emerald-800 border-emerald-200";
-          icon = "ph-pill";
-        } else if (item.type === 'reminder') {
-          badgeStyle = "bg-amber-100 text-amber-800 border-amber-200";
-          icon = "ph-bell";
-        }
+      // Sort Chronologically
+      items.sort((a, b) => a.rawMinutes - b.rawMinutes);
 
-        const isCompleted = item.completed;
-
-        return `
-          <div class="bg-white p-4 rounded-xl border ${isCompleted ? 'border-slate-200 bg-slate-50/60' : 'border-slate-200'} shadow-sm flex items-center justify-between gap-3 transition">
-            <div class="flex items-center gap-3">
-              <input type="checkbox" ${isCompleted ? 'checked' : ''} onchange="toggleItemCompletion('${item.id}', '${selectedDate}')" class="w-5 h-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer">
-              
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-bold px-2 py-0.5 rounded-full border ${badgeStyle} flex items-center gap-1">
-                    <i class="ph-bold ${icon}"></i> ${item.type.toUpperCase()}
-                  </span>
-                  <span class="text-sm font-semibold text-indigo-600">${formatTime12H(item.time)}</span>
-                  ${item.groupName ? `<span class="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 font-semibold px-2 py-0.5 rounded-md">Grp: ${item.groupName}</span>` : ''}
-                </div>
-                <h4 class="font-semibold text-slate-800 text-base mt-1 ${isCompleted ? 'line-through text-slate-400' : ''}">${item.title}</h4>
-                <p class="text-xs text-slate-500">${item.details}</p>
+      items.forEach(item => {
+        const isLogged = AppState.logs.some(l => l.id === item.id && l.date === selectedDate);
+        const div = document.createElement('div');
+        div.className = 'schedule-item';
+        div.innerHTML = `
+          <div class="item-left">
+            <input type="checkbox" class="item-checkbox" ${isLogged ? 'checked' : ''} onchange="toggleCheck('${item.id}', '${item.title}', '${selectedDate}', this.checked)">
+            <div>
+              <div class="item-title ${isLogged ? 'completed' : ''}">${item.title}</div>
+              <div class="item-sub">
+                <span class="badge badge-${item.type}">${item.type}</span>
+                ${item.time} ${item.sub ? '• ' + item.sub : ''}
               </div>
             </div>
-
-            <div class="flex items-center gap-1">
-              <button onclick="promptShiftModal('${item.id}', '${selectedDate}')" title="Adjust / Shift Time" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition">
-                <i class="ph-bold ph-clock text-lg"></i>
-              </button>
-              <button onclick="deleteItem('${item.id}', '${selectedDate}', '${item.type}', '${item.refId}')" title="Delete Item" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition">
-                <i class="ph-bold ph-trash text-lg"></i>
-              </button>
-            </div>
           </div>
         `;
-      }).join('');
-    }
-
-    // TOGGLE CHECKBOX & LOG TO HISTORY
-    function toggleItemCompletion(occId, selectedDate) {
-      let occurrences = generateOccurrencesForDate(selectedDate);
-      let item = occurrences.find(o => o.id === occId);
-      
-      if (!item) return;
-
-      item.completed = !item.completed;
-
-      // Update local array or replace
-      const existingIdx = State.scheduleOccurrences.findIndex(o => o.id === occId);
-      if (existingIdx >= 0) {
-        State.scheduleOccurrences[existingIdx] = item;
-      } else {
-        State.scheduleOccurrences.push(item);
-      }
-
-      // Record to history log if completed
-      if (item.completed) {
-        State.logs.unshift({
-          id: 'log_' + Date.now(),
-          occId: item.id,
-          title: item.title,
-          type: item.type,
-          details: item.details,
-          scheduledDate: selectedDate,
-          scheduledTime: item.time,
-          completedTimestamp: new Date().toISOString()
-        });
-      } else {
-        // Remove log entry if unchecked
-        State.logs = State.logs.filter(l => l.occId !== item.id);
-      }
-
-      saveStorage();
-      renderSchedule();
-    }
-
-    // SHIFT TIME / GROUP RIPPLE LOGIC
-    function promptShiftModal(occId, selectedDate) {
-      const occurrences = generateOccurrencesForDate(selectedDate);
-      const item = occurrences.find(o => o.id === occId);
-      if (!item) return;
-
-      activeShiftContext = { item, selectedDate };
-
-      document.getElementById('shift-item-description').innerText = `Adjusting time for "${item.title}" (${formatTime12H(item.time)})`;
-      document.getElementById('shift-new-time').value = item.time;
-
-      const optsContainer = document.getElementById('shift-options-container');
-      optsContainer.innerHTML = '';
-
-      if (item.type === 'medication') {
-        const med = State.medications.find(m => m.id === item.refId);
-        
-        let html = `
-          <div class="flex items-center gap-2">
-            <input type="radio" id="shift-opt-single" name="shift-scope" value="single" checked class="text-indigo-600">
-            <label for="shift-opt-single" class="text-xs text-slate-700">Shift ONLY this dose</label>
-          </div>
-          <div class="flex items-center gap-2">
-            <input type="radio" id="shift-opt-subsequent" name="shift-scope" value="subsequent" class="text-indigo-600">
-            <label for="shift-opt-subsequent" class="text-xs text-slate-700">Recalculate ALL subsequent doses today</label>
-          </div>
-        `;
-
-        if (item.groupName) {
-          html += `
-            <div class="flex items-center gap-2">
-              <input type="radio" id="shift-opt-group" name="shift-scope" value="group" class="text-indigo-600">
-              <label for="shift-opt-group" class="text-xs text-slate-700 font-semibold text-purple-700">Shift ALL medications in group "${item.groupName}"</label>
-            </div>
-          `;
-        }
-        optsContainer.innerHTML = html;
-      } else {
-        optsContainer.innerHTML = `<p class="text-xs text-slate-400">Time will be updated for this item occurrence.</p>`;
-      }
-
-      openModal('shift-modal');
-    }
-
-    function executeShiftTime() {
-      if (!activeShiftContext) return;
-
-      const { item, selectedDate } = activeShiftContext;
-      const newTime = document.getElementById('shift-new-time').value;
-      if (!newTime) return;
-
-      const deltaMinutes = getTimeDifferenceMinutes(item.time, newTime);
-      const scopeElem = document.querySelector('input[name="shift-scope"]:checked');
-      const scope = scopeElem ? scopeElem.value : 'single';
-
-      let occurrences = generateOccurrencesForDate(selectedDate);
-
-      if (item.type === 'medication' && scope === 'group' && item.groupName) {
-        // Shift all doses in this group on this date by deltaMinutes
-        occurrences.forEach(occ => {
-          if (occ.groupName === item.groupName) {
-            occ.time = addMinutesToTime(occ.time, deltaMinutes);
-            saveOccurrenceOverride(occ);
-          }
-        });
-      } else if (item.type === 'medication' && scope === 'subsequent') {
-        // Shift this dose and subsequent dose indices
-        occurrences.forEach(occ => {
-          if (occ.refId === item.refId && occ.doseIndex >= item.doseIndex) {
-            occ.time = addMinutesToTime(occ.time, deltaMinutes);
-            saveOccurrenceOverride(occ);
-          }
-        });
-      } else {
-        // Single shift
-        item.time = newTime;
-        saveOccurrenceOverride(item);
-      }
-
-      saveStorage();
-      closeModal('shift-modal');
-      renderSchedule();
-    }
-
-    function saveOccurrenceOverride(occ) {
-      const idx = State.scheduleOccurrences.findIndex(o => o.id === occ.id);
-      if (idx >= 0) {
-        State.scheduleOccurrences[idx] = occ;
-      } else {
-        State.scheduleOccurrences.push(occ);
-      }
-    }
-
-    // DELETE ITEM
-    function deleteItem(occId, selectedDate, type, refId) {
-      if (!confirm("Remove this scheduled item?")) return;
-
-      State.scheduleOccurrences = State.scheduleOccurrences.filter(o => o.id !== occId);
-
-      // If it's a primary template deletion query:
-      if (confirm("Would you also like to delete the master template so it doesn't repeat on future days?")) {
-        if (type === 'medication') State.medications = State.medications.filter(m => m.id !== refId);
-        if (type === 'task') State.tasks = State.tasks.filter(t => t.id !== refId);
-        if (type === 'reminder') State.reminders = State.reminders.filter(r => r.id !== refId);
-      }
-
-      saveStorage();
-      renderSchedule();
-    }
-
-    // RENDER HISTORY & SEARCH
-    function renderHistory() {
-      const query = document.getElementById('history-search-input').value.toLowerCase().trim();
-      const typeFilter = document.getElementById('history-type-filter').value;
-      const container = document.getElementById('history-container');
-
-      let filtered = State.logs.filter(log => {
-        const matchesQuery = log.title.toLowerCase().includes(query) || log.details.toLowerCase().includes(query);
-        const matchesType = typeFilter === 'all' || log.type === typeFilter;
-        return matchesQuery && matchesType;
+        container.appendChild(div);
       });
+    }
+
+    function toggleCheck(id, title, date, checked) {
+      if (checked) {
+        AppState.logs.push({
+          id: id,
+          title: title,
+          date: date,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        AppState.logs = AppState.logs.filter(l => !(l.id === id && l.date === date));
+      }
+      AppState.save();
+      renderSchedule();
+    }
+
+    function renderHistory() {
+      const container = document.getElementById('history-list');
+      const query = (document.getElementById('history-search').value || '').toLowerCase();
+      container.innerHTML = '';
+
+      const filtered = AppState.logs.filter(l => l.title.toLowerCase().includes(query));
 
       if (filtered.length === 0) {
-        container.innerHTML = `
-          <div class="bg-white p-8 text-center rounded-xl border border-slate-200">
-            <i class="ph-duotone ph-magnifying-glass text-4xl text-slate-300 mb-2"></i>
-            <p class="text-sm font-medium text-slate-500">No matching completion logs found.</p>
-          </div>
-        `;
+        container.innerHTML = '<div class="empty-state">No completion logs found.</div>';
         return;
       }
 
-      container.innerHTML = filtered.map(log => {
-        const completedDateStr = new Date(log.completedTimestamp).toLocaleString('en-US', {
-          month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
-        });
-
-        return `
-          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase bg-slate-100 text-slate-700">${log.type}</span>
-                <span class="text-xs text-slate-400">Scheduled: ${log.scheduledDate} @ ${formatTime12H(log.scheduledTime)}</span>
-              </div>
-              <h4 class="font-semibold text-slate-800 text-sm mt-1">${log.title}</h4>
-              <p class="text-xs text-slate-500">${log.details}</p>
-            </div>
-            <div class="text-right">
-              <span class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
-                <i class="ph-bold ph-check-circle"></i> Done ${completedDateStr}
-              </span>
-            </div>
+      filtered.reverse().forEach(log => {
+        const div = document.createElement('div');
+        div.className = 'schedule-item';
+        const formattedTime = new Date(log.timestamp).toLocaleString();
+        div.innerHTML = `
+          <div>
+            <div class="item-title">${log.title}</div>
+            <div class="item-sub">Completed: ${formattedTime}</div>
           </div>
         `;
-      }).join('');
+        container.appendChild(div);
+      });
     }
 
-    // WEB AUDIO SOUND SYNTHESIZER (For Reminder Alerts)
-    function playAlertSound() {
-      try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContext) return;
-        const ctx = new AudioContext();
-        
-        // Gentle dual-tone chime
-        const playTone = (freq, start, duration) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
-          gain.gain.setValueAtTime(0.3, ctx.currentTime + start);
-          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + duration);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(ctx.currentTime + start);
-          osc.stop(ctx.currentTime + start + duration);
-        };
-
-        playTone(523.25, 0, 0.4); // C5
-        playTone(659.25, 0.25, 0.6); // E5
-        playTone(783.99, 0.5, 0.8); // G5
-      } catch (e) {
-        console.log("Audio play blocked by browser policy until interaction.", e);
-      }
-    }
-
-    // NOTIFICATIONS ENGINE
-    function setupNotifications() {
-      if ("Notification" in window && Notification.permission === "default") {
-        Notification.requestPermission();
-      }
-    }
-
-    function triggerReminderNotification(title, message) {
-      playAlertSound();
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification(title, { body: message, icon: 'https://placehold.co/128x128/10b981/ffffff?text=Care' });
-      }
-    }
-
-    // Background Timer to Trigger Sound Reminders
-    function startReminderChecker() {
-      setInterval(() => {
-        const now = new Date();
-        const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        const todayStr = now.toISOString().split('T')[0];
-
-        const occurrences = generateOccurrencesForDate(todayStr);
-        occurrences.forEach(occ => {
-          if (occ.type === 'reminder' && occ.time === currentTimeStr && !occ.alerted && !occ.completed) {
-            occ.alerted = true;
-            triggerReminderNotification("Care Reminder Alert!", occ.title);
-          }
-        });
-      }, 30000); // Check every 30 seconds
-    }
-
-    // EXPORT & IMPORT DATA
     function exportData() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(State, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `care_schedule_backup_${new Date().toISOString().split('T')[0]}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(AppState, null, 2));
+      const a = document.createElement('a');
+      a.href = dataStr;
+      a.download = `care_daily_backup_${getTodayString()}.json`;
+      a.click();
     }
 
-    function importDataPrompt() {
-      const jsonStr = prompt("Paste your backed-up JSON data string here:");
-      if (!jsonStr) return;
-      try {
-        const parsed = JSON.parse(jsonStr);
-        if (parsed.medications && parsed.tasks && parsed.reminders) {
-          State.medications = parsed.medications || [];
-          State.tasks = parsed.tasks || [];
-          State.reminders = parsed.reminders || [];
-          State.scheduleOccurrences = parsed.scheduleOccurrences || [];
-          State.logs = parsed.logs || [];
-          saveStorage();
-          renderSchedule();
-          alert("Data restored successfully!");
-        } else {
-          alert("Invalid data structure.");
+    function importData(e) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        try {
+          const imported = JSON.parse(event.target.result);
+          if (imported.meds && imported.tasks) {
+            AppState.meds = imported.meds || [];
+            AppState.tasks = imported.tasks || [];
+            AppState.reminders = imported.reminders || [];
+            AppState.logs = imported.logs || [];
+            AppState.save();
+            renderSchedule();
+            alert('Data imported successfully!');
+          }
+        } catch (err) {
+          alert('Invalid JSON file format.');
         }
-      } catch (e) {
-        alert("Failed to parse JSON string.");
+      };
+      reader.readAsText(e.target.files[0]);
+    }
+
+    function clearAllData() {
+      if (confirm('Are you sure you want to clear all medications, tasks, and history?')) {
+        localStorage.clear();
+        AppState.meds = [];
+        AppState.tasks = [];
+        AppState.reminders = [];
+        AppState.logs = [];
+        renderSchedule();
       }
     }
+
+    // Initial load
+    renderSchedule();
   </script>
 </body>
 </html>
