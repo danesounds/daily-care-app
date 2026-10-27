@@ -63,7 +63,11 @@
     .form-group { margin-bottom: 1rem; }
     .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.3rem; color: var(--text-muted); }
     
-    .form-group input, .form-group textarea {
+    /* Target only text/time/number inputs for custom Safari normalization */
+    .form-group input[type="text"],
+    .form-group input[type="time"],
+    .form-group input[type="number"],
+    .form-group textarea {
       width: 100%;
       height: 44px;
       padding: 0 0.75rem;
@@ -88,8 +92,14 @@
     .form-row { display: flex; gap: 0.75rem; }
     .form-row .form-group { flex: 1; min-width: 0; }
 
-    .checkbox-label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: 600; color: var(--text); cursor: pointer; margin-top: 0.25rem; }
-    .checkbox-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); }
+    /* Explicit Checkbox Styling */
+    .checkbox-label { display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 600; color: var(--text); cursor: pointer; margin-top: 0.25rem; }
+    .checkbox-label input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
 
     .submit-btn { width: 100%; background: var(--primary); color: white; border: none; padding: 0.8rem; border-radius: 8px; font-weight: 600; font-size: 0.95rem; cursor: pointer; margin-top: 0.5rem; }
     .submit-btn:active { background: var(--primary-hover); }
@@ -264,7 +274,7 @@
       document.getElementById('task-name').value = task.name;
       document.getElementById('task-time').value = normalizeTimeToHHMM(task.time || '09:00');
       document.getElementById('task-duration').value = task.duration !== undefined ? task.duration : 15;
-      document.getElementById('task-repeat').checked = task.repeatDaily !== false; // Default true
+      document.getElementById('task-repeat').checked = task.repeatDaily !== false;
       document.getElementById('task-notes').value = task.notes || '';
       document.getElementById('task-delete-btn').style.display = 'block';
       openModal('modal-task');
@@ -281,7 +291,6 @@
 
       const normalizedTime = normalizeTimeToHHMM(inputTime || '09:00');
 
-      // Save title to prediction history if new
       if (name && !AppState.historyTitles.includes(name)) {
         AppState.historyTitles.push(name);
       }
@@ -374,7 +383,6 @@
         const isRecurring = task.repeatDaily !== false;
         const taskCreated = task.createdDate || '2000-01-01';
 
-        // Show task if it repeats daily OR matches the target creation date
         if (isRecurring || taskCreated === selectedDate) {
           const taskTime = normalizeTimeToHHMM(task.time || '09:00');
           items.push({
