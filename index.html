@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- Disable caching for iOS Home Screen App updates -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Daily Task Manager</title>
   <style>
     :root {
@@ -63,7 +67,6 @@
     .form-group { margin-bottom: 1rem; }
     .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.3rem; color: var(--text-muted); }
     
-    /* Target only text/time/number inputs for custom Safari normalization */
     .form-group input[type="text"],
     .form-group input[type="time"],
     .form-group input[type="number"],
@@ -92,7 +95,6 @@
     .form-row { display: flex; gap: 0.75rem; }
     .form-row .form-group { flex: 1; min-width: 0; }
 
-    /* Explicit Checkbox Styling */
     .checkbox-label { display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 600; color: var(--text); cursor: pointer; margin-top: 0.25rem; }
     .checkbox-label input[type="checkbox"] {
       width: 20px;
@@ -484,12 +486,38 @@
       });
     }
 
-    function exportData() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(AppState, null, 2));
+    // iOS Home Screen App-Compatible JSON Export
+    async function exportData() {
+      const fileName = `care_daily_tasks_backup_${getTodayString()}.json`;
+      const jsonText = JSON.stringify(AppState, null, 2);
+
+      // Attempt native Web Share API (Works in iOS Home Screen Standalone Mode)
+      if (navigator.canShare && navigator.share) {
+        try {
+          const file = new File([jsonText], fileName, { type: 'application/json' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: 'Care Daily Backup',
+              text: 'Care Daily Tasks Backup File'
+            });
+            return;
+          }
+        } catch (err) {
+          // If share cancelled or unsupported, fallback below
+        }
+      }
+
+      // Standard browser download fallback
+      const blob = new Blob([jsonText], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = dataStr;
-      a.download = `care_daily_tasks_backup_${getTodayString()}.json`;
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
 
     function importData(e) {
