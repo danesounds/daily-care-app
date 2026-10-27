@@ -236,7 +236,7 @@
       document.getElementById('task-modal-title').innerText = 'Edit Task';
       document.getElementById('task-edit-id').value = task.id;
       document.getElementById('task-name').value = task.name;
-      document.getElementById('task-time').value = task.time || '09:00';
+      document.getElementById('task-time').value = normalizeTimeToHHMM(task.time || '09:00');
       document.getElementById('task-duration').value = task.duration !== undefined ? task.duration : 15;
       document.getElementById('task-notes').value = task.notes || '';
       document.getElementById('task-delete-btn').style.display = 'block';
@@ -247,12 +247,11 @@
       e.preventDefault();
       const editId = document.getElementById('task-edit-id').value;
       const name = document.getElementById('task-name').value.trim();
-      const rawTime = document.getElementById('task-time').value || '09:00';
+      const inputTime = document.getElementById('task-time').value;
       const duration = parseInt(document.getElementById('task-duration').value) || 0;
       const notes = document.getElementById('task-notes').value.trim();
 
-      // Normalize time value to HH:MM format
-      const normalizedTime = normalizeTimeToHHMM(rawTime);
+      const normalizedTime = normalizeTimeToHHMM(inputTime || '09:00');
 
       if (editId) {
         const task = AppState.tasks.find(t => t.id === editId);
@@ -287,16 +286,21 @@
       }
     }
 
-    // Helper: Safely normalizes input time strings to 24-hour "HH:MM"
+    // Helper: Always convert any time string into standard 24-hour HH:MM format
     function normalizeTimeToHHMM(timeStr) {
-      if (!timeStr) return '09:00';
+      if (!timeStr || typeof timeStr !== 'string') return '09:00';
+      
       const str = timeStr.trim().toUpperCase();
       const isPM = str.includes('PM');
       const isAM = str.includes('AM');
-      const cleanStr = str.replace(/[^\d:]/g, '');
-      const parts = cleanStr.split(':');
-      let h = parseInt(parts[0], 10) || 0;
-      const m = parseInt(parts[1], 10) || 0;
+      const clean = str.replace(/[^\d:]/g, '');
+      const parts = clean.split(':');
+
+      let h = parseInt(parts[0], 10);
+      let m = parseInt(parts[1], 10);
+
+      if (isNaN(h)) h = 9;
+      if (isNaN(m)) m = 0;
 
       if (isPM && h < 12) h += 12;
       if (isAM && h === 12) h = 0;
@@ -304,7 +308,7 @@
       return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     }
 
-    // Helper: Format 24-hour ("14:30") to 12-hour AM/PM ("2:30 PM")
+    // Helper: Format 24-hour ("14:30") to 12-hour AM/PM ("2:30 PM") for rendering
     function format12Hour(timeStr) {
       const hhmm = normalizeTimeToHHMM(timeStr);
       const parts = hhmm.split(':');
@@ -316,7 +320,7 @@
       return `${hours}:${minutes} ${ampm}`;
     }
 
-    // Helper: Convert any time string into total minutes from midnight
+    // Helper: Convert "HH:MM" into total minutes from midnight for sorting
     function parseToMinutes(timeStr) {
       const hhmm = normalizeTimeToHHMM(timeStr);
       const parts = hhmm.split(':');
@@ -334,7 +338,7 @@
       let items = [];
 
       AppState.tasks.forEach(task => {
-        const taskTime = task.time || '09:00';
+        const taskTime = normalizeTimeToHHMM(task.time || '09:00');
         items.push({
           id: `${task.id}_${selectedDate}`,
           taskId: task.id,
@@ -356,6 +360,7 @@
         return;
       }
 
+      // Sort items chronologically from midnight (0 to 1439 mins)
       items.sort((a, b) => a.rawMinutes - b.rawMinutes);
 
       items.forEach(item => {
