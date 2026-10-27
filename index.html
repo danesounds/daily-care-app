@@ -48,6 +48,8 @@
     .item-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem; }
     .item-notes { font-size: 0.825rem; color: #475569; background: #f8fafc; padding: 0.4rem 0.6rem; border-radius: 6px; border-left: 3px solid var(--primary); margin-top: 0.4rem; white-space: pre-wrap; }
 
+    .repeat-badge { font-size: 0.7rem; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 0.15rem 0.4rem; border-radius: 4px; margin-left: 0.3rem; }
+
     .edit-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); cursor: pointer; }
     .edit-btn:active { background: #f1f5f9; }
 
@@ -61,7 +63,6 @@
     .form-group { margin-bottom: 1rem; }
     .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.3rem; color: var(--text-muted); }
     
-    /* Normalized form controls across iOS Safari */
     .form-group input, .form-group textarea {
       width: 100%;
       height: 44px;
@@ -86,6 +87,9 @@
 
     .form-row { display: flex; gap: 0.75rem; }
     .form-row .form-group { flex: 1; min-width: 0; }
+
+    .checkbox-label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: 600; color: var(--text); cursor: pointer; margin-top: 0.25rem; }
+    .checkbox-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); }
 
     .submit-btn { width: 100%; background: var(--primary); color: white; border: none; padding: 0.8rem; border-radius: 8px; font-weight: 600; font-size: 0.95rem; cursor: pointer; margin-top: 0.5rem; }
     .submit-btn:active { background: var(--primary-hover); }
@@ -164,7 +168,8 @@
         <input type="hidden" id="task-edit-id" value="">
         <div class="form-group">
           <label>Task Name</label>
-          <input type="text" id="task-name" required placeholder="e.g. Light Stretch">
+          <input type="text" id="task-name" required placeholder="e.g. Light Stretch" list="task-suggestions" autocomplete="off">
+          <datalist id="task-suggestions"></datalist>
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -175,6 +180,12 @@
             <label>Duration (mins)</label>
             <input type="number" id="task-duration" value="15" required>
           </div>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="task-repeat" checked>
+            <span>Repeats Daily</span>
+          </label>
         </div>
         <div class="form-group">
           <label>Notes / Details (Optional)</label>
@@ -190,10 +201,12 @@
     const AppState = {
       tasks: JSON.parse(localStorage.getItem('care_tasks') || '[]'),
       logs: JSON.parse(localStorage.getItem('care_logs') || '[]'),
+      historyTitles: JSON.parse(localStorage.getItem('care_history_titles') || '[]'),
 
       save() {
         localStorage.setItem('care_tasks', JSON.stringify(this.tasks));
         localStorage.setItem('care_logs', JSON.stringify(this.logs));
+        localStorage.setItem('care_history_titles', JSON.stringify(this.historyTitles));
       }
     };
 
@@ -218,18 +231,31 @@
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
+    function updateTaskDatalist() {
+      const datalist = document.getElementById('task-suggestions');
+      datalist.innerHTML = '';
+      AppState.historyTitles.forEach(title => {
+        const option = document.createElement('option');
+        option.value = title;
+        datalist.appendChild(option);
+      });
+    }
+
     function openNewTaskModal() {
+      updateTaskDatalist();
       document.getElementById('task-modal-title').innerText = 'Add Task';
       document.getElementById('task-edit-id').value = '';
       document.getElementById('task-name').value = '';
       document.getElementById('task-time').value = '09:00';
       document.getElementById('task-duration').value = '15';
+      document.getElementById('task-repeat').checked = true;
       document.getElementById('task-notes').value = '';
       document.getElementById('task-delete-btn').style.display = 'none';
       openModal('modal-task');
     }
 
     function openEditTaskModal(taskId) {
+      updateTaskDatalist();
       const task = AppState.tasks.find(t => t.id === taskId);
       if (!task) return;
 
@@ -238,6 +264,7 @@
       document.getElementById('task-name').value = task.name;
       document.getElementById('task-time').value = normalizeTimeToHHMM(task.time || '09:00');
       document.getElementById('task-duration').value = task.duration !== undefined ? task.duration : 15;
+      document.getElementById('task-repeat').checked = task.repeatDaily !== false; // Default true
       document.getElementById('task-notes').value = task.notes || '';
       document.getElementById('task-delete-btn').style.display = 'block';
       openModal('modal-task');
@@ -249,9 +276,15 @@
       const name = document.getElementById('task-name').value.trim();
       const inputTime = document.getElementById('task-time').value;
       const duration = parseInt(document.getElementById('task-duration').value) || 0;
+      const repeatDaily = document.getElementById('task-repeat').checked;
       const notes = document.getElementById('task-notes').value.trim();
 
       const normalizedTime = normalizeTimeToHHMM(inputTime || '09:00');
+
+      // Save title to prediction history if new
+      if (name && !AppState.historyTitles.includes(name)) {
+        AppState.historyTitles.push(name);
+      }
 
       if (editId) {
         const task = AppState.tasks.find(t => t.id === editId);
@@ -259,6 +292,7 @@
           task.name = name;
           task.time = normalizedTime;
           task.duration = duration;
+          task.repeatDaily = repeatDaily;
           task.notes = notes;
         }
       } else {
@@ -267,6 +301,8 @@
           name: name,
           time: normalizedTime,
           duration: duration,
+          repeatDaily: repeatDaily,
+          createdDate: document.getElementById('schedule-date').value || getTodayString(),
           notes: notes
         });
       }
@@ -286,7 +322,6 @@
       }
     }
 
-    // Helper: Always convert any time string into standard 24-hour HH:MM format
     function normalizeTimeToHHMM(timeStr) {
       if (!timeStr || typeof timeStr !== 'string') return '09:00';
       
@@ -308,7 +343,6 @@
       return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     }
 
-    // Helper: Format 24-hour ("14:30") to 12-hour AM/PM ("2:30 PM") for rendering
     function format12Hour(timeStr) {
       const hhmm = normalizeTimeToHHMM(timeStr);
       const parts = hhmm.split(':');
@@ -320,7 +354,6 @@
       return `${hours}:${minutes} ${ampm}`;
     }
 
-    // Helper: Convert "HH:MM" into total minutes from midnight for sorting
     function parseToMinutes(timeStr) {
       const hhmm = normalizeTimeToHHMM(timeStr);
       const parts = hhmm.split(':');
@@ -338,17 +371,24 @@
       let items = [];
 
       AppState.tasks.forEach(task => {
-        const taskTime = normalizeTimeToHHMM(task.time || '09:00');
-        items.push({
-          id: `${task.id}_${selectedDate}`,
-          taskId: task.id,
-          title: task.name,
-          time: taskTime,
-          timeDisplay: format12Hour(taskTime),
-          duration: task.duration,
-          notes: task.notes || '',
-          rawMinutes: parseToMinutes(taskTime)
-        });
+        const isRecurring = task.repeatDaily !== false;
+        const taskCreated = task.createdDate || '2000-01-01';
+
+        // Show task if it repeats daily OR matches the target creation date
+        if (isRecurring || taskCreated === selectedDate) {
+          const taskTime = normalizeTimeToHHMM(task.time || '09:00');
+          items.push({
+            id: `${task.id}_${selectedDate}`,
+            taskId: task.id,
+            title: task.name,
+            time: taskTime,
+            timeDisplay: format12Hour(taskTime),
+            duration: task.duration,
+            repeatDaily: isRecurring,
+            notes: task.notes || '',
+            rawMinutes: parseToMinutes(taskTime)
+          });
+        }
       });
 
       if (hideCompleted) {
@@ -356,11 +396,10 @@
       }
 
       if (items.length === 0) {
-        container.innerHTML = '<div class="empty-state">No tasks scheduled. Tap "+ Add New Task" above to get started.</div>';
+        container.innerHTML = '<div class="empty-state">No tasks scheduled for this date. Tap "+ Add New Task" above to get started.</div>';
         return;
       }
 
-      // Sort items chronologically from midnight (0 to 1439 mins)
       items.sort((a, b) => a.rawMinutes - b.rawMinutes);
 
       items.forEach(item => {
@@ -375,7 +414,10 @@
             <input type="checkbox" class="item-checkbox" ${isLogged ? 'checked' : ''} onchange="toggleCheck('${item.id}', '${safeTitle}', '${selectedDate}', this.checked)">
             <div style="flex:1;">
               <div class="item-title ${isLogged ? 'completed' : ''}">${escapeHtml(item.title)}</div>
-              <div class="item-sub">${item.timeDisplay}${item.duration ? ' • ' + item.duration + ' mins' : ''}</div>
+              <div class="item-sub">
+                ${item.timeDisplay}${item.duration ? ' • ' + item.duration + ' mins' : ''}
+                ${item.repeatDaily ? '<span class="repeat-badge">Daily</span>' : ''}
+              </div>
               ${item.notes ? `<div class="item-notes">${escapeHtml(item.notes)}</div>` : ''}
             </div>
           </div>
@@ -450,6 +492,7 @@
           if (imported.tasks) {
             AppState.tasks = imported.tasks || [];
             AppState.logs = imported.logs || [];
+            AppState.historyTitles = imported.historyTitles || [];
             AppState.save();
             renderSchedule();
             alert('Data imported successfully!');
@@ -466,6 +509,7 @@
         localStorage.clear();
         AppState.tasks = [];
         AppState.logs = [];
+        AppState.historyTitles = [];
         renderSchedule();
       }
     }
