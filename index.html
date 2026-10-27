@@ -32,6 +32,8 @@
     .date-picker-bar { display: flex; align-items: center; justify-content: space-between; background: var(--card-bg); padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 1rem; }
     .date-picker-bar input { border: 1px solid var(--border); padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.9rem; font-family: inherit; }
 
+    .schedule-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; font-size: 0.85rem; color: var(--text-muted); }
+
     .action-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 1rem; }
     .action-btn { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 0.5rem; text-align: center; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--primary); }
     .action-btn:active { background: #f1f5f9; }
@@ -51,7 +53,6 @@
     .badge-task { background: #dcfce7; color: #166534; }
     .badge-reminder { background: #fef3c7; color: #92400e; }
 
-    /* Modal styling */
     .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
     .modal.active { display: flex; }
     .modal-content { background: var(--card-bg); width: 100%; max-width: 480px; border-radius: 16px; padding: 1.25rem; max-height: 90vh; overflow-y: auto; }
@@ -69,6 +70,9 @@
     .submit-btn:active { background: var(--primary-hover); }
 
     .empty-state { text-align: center; padding: 2rem 1rem; color: var(--text-muted); font-size: 0.9rem; }
+    
+    .alert-banner { background: #e0e7ff; color: #3730a3; padding: 0.75rem; border-radius: 8px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .alert-btn { background: #4f46e5; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -85,6 +89,11 @@
   </header>
 
   <main id="tab-schedule">
+    <div id="permission-banner" class="alert-banner">
+      <span>Enable audio sounds & notifications for reminders</span>
+      <button class="alert-btn" onclick="enableAudioAndNotifications()">Enable</button>
+    </div>
+
     <div class="date-picker-bar">
       <span style="font-weight:600; font-size:0.9rem;">Selected Date:</span>
       <input type="date" id="schedule-date" onchange="renderSchedule()">
@@ -94,6 +103,14 @@
       <button class="action-btn" onclick="openModal('modal-med')">+ Medication</button>
       <button class="action-btn" onclick="openModal('modal-task')">+ Task</button>
       <button class="action-btn" onclick="openModal('modal-reminder')">+ Reminder</button>
+    </div>
+
+    <div class="schedule-controls">
+      <span>Timeline</span>
+      <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;">
+        <input type="checkbox" id="hide-completed-toggle" onchange="renderSchedule()">
+        <span>Hide completed</span>
+      </label>
     </div>
 
     <div class="card">
@@ -214,8 +231,20 @@
     </div>
   </div>
 
+  <!-- Reminder Trigger Alert Modal -->
+  <div class="modal" id="modal-alert">
+    <div class="modal-content" style="text-align:center;">
+      <div style="font-size:2.5rem; margin-bottom:0.5rem;">🔔</div>
+      <h3 id="alert-title" style="margin-bottom:0.5rem;">Reminder Alert</h3>
+      <p id="alert-sub" style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.5rem;"></p>
+      <div style="display:flex; gap:0.5rem;">
+        <button class="submit-btn" style="background:#0284c7; flex:1;" onclick="snoozeReminder(8)">Snooze (8 Mins)</button>
+        <button class="submit-btn" style="flex:1;" onclick="dismissAlert()">Dismiss</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // App State Management
     const AppState = {
       meds: JSON.parse(localStorage.getItem('care_meds') || '[]'),
       tasks: JSON.parse(localStorage.getItem('care_tasks') || '[]'),
@@ -230,17 +259,60 @@
       }
     };
 
-    // Helper: Safely format date as YYYY-MM-DD
+    let audioCtx = null;
+    let activeAlertReminder = null;
+
     function getTodayString() {
       const d = new Date();
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
-    // Set default date input on launch
     document.getElementById('schedule-date').value = getTodayString();
+
+    // Enable Audio & Request Notification Permissions
+    function enableAudioAndNotifications() {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      if ('Notification' in window && Notification.permission !== 'granted') {
+        Notification.requestPermission();
+      }
+
+      document.getElementById('permission-banner').style.display = 'none';
+      playDingSound();
+    }
+
+    // Audible "Ding" Sound Synthesizer
+    function playDingSound() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      const now = audioCtx.currentTime;
+      
+      // First tone (E5)
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      osc1.frequency.setValueAtTime(659.25, now);
+      gain1.gain.setValueAtTime(0.3, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      osc1.connect(gain1);
+      gain1.connect(audioCtx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.5);
+
+      // Second tone (A5 chime)
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.frequency.setValueAtTime(880.00, now + 0.15);
+      gain2.gain.setValueAtTime(0.4, now + 0.15);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+      osc2.connect(gain2);
+      gain2.connect(audioCtx.destination);
+      osc2.start(now + 0.15);
+      osc2.stop(now + 0.8);
+    }
 
     function switchTab(tabName) {
       ['schedule', 'history', 'settings'].forEach(t => {
@@ -256,10 +328,9 @@
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-    // Save Handlers
     function saveMedication(e) {
       e.preventDefault();
-      const med = {
+      AppState.meds.push({
         id: 'med_' + Date.now(),
         name: document.getElementById('med-name').value,
         dose: document.getElementById('med-dose').value,
@@ -267,8 +338,7 @@
         interval: parseInt(document.getElementById('med-interval').value),
         firstTime: document.getElementById('med-first-time').value,
         group: document.getElementById('med-group').value.trim()
-      };
-      AppState.meds.push(med);
+      });
       AppState.save();
       closeModal('modal-med');
       e.target.reset();
@@ -277,13 +347,12 @@
 
     function saveTask(e) {
       e.preventDefault();
-      const task = {
+      AppState.tasks.push({
         id: 'task_' + Date.now(),
         name: document.getElementById('task-name').value,
         duration: parseInt(document.getElementById('task-duration').value),
         time: document.getElementById('task-time').value
-      };
-      AppState.tasks.push(task);
+      });
       AppState.save();
       closeModal('modal-task');
       e.target.reset();
@@ -292,36 +361,33 @@
 
     function saveReminder(e) {
       e.preventDefault();
-      const reminder = {
+      AppState.reminders.push({
         id: 'rem_' + Date.now(),
         text: document.getElementById('reminder-text').value,
-        time: document.getElementById('reminder-time').value
-      };
-      AppState.reminders.push(reminder);
+        time: document.getElementById('reminder-time').value,
+        lastTriggered: null
+      });
       AppState.save();
       closeModal('modal-reminder');
       e.target.reset();
       renderSchedule();
     }
 
-    // Render Daily Schedule
     function renderSchedule() {
       const selectedDate = document.getElementById('schedule-date').value || getTodayString();
+      const hideCompleted = document.getElementById('hide-completed-toggle').checked;
       const container = document.getElementById('schedule-list');
       container.innerHTML = '';
 
       let items = [];
 
-      // Generate Medication Doses
       AppState.meds.forEach(med => {
         const [h, m] = med.firstTime.split(':').map(Number);
         for (let i = 0; i < med.freq; i++) {
           const doseHour = (h + (i * med.interval)) % 24;
           const timeStr = `${String(doseHour).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-          const itemId = `${med.id}_dose_${i}_${selectedDate}`;
-          
           items.push({
-            id: itemId,
+            id: `${med.id}_dose_${i}_${selectedDate}`,
             type: 'med',
             title: med.name,
             sub: `${med.dose ? med.dose + ' • ' : ''}Dose ${i + 1} of ${med.freq}${med.group ? ' (' + med.group + ')' : ''}`,
@@ -331,7 +397,6 @@
         }
       });
 
-      // Generate Tasks
       AppState.tasks.forEach(task => {
         const [h, m] = task.time.split(':').map(Number);
         items.push({
@@ -344,7 +409,6 @@
         });
       });
 
-      // Generate Reminders
       AppState.reminders.forEach(rem => {
         const [h, m] = rem.time.split(':').map(Number);
         items.push({
@@ -353,16 +417,21 @@
           title: rem.text,
           sub: 'Reminder',
           time: rem.time,
-          rawMinutes: h * 60 + m
+          rawMinutes: h * 60 + m,
+          rawReminder: rem
         });
       });
+
+      // Filter completed items if toggle is active
+      if (hideCompleted) {
+        items = items.filter(item => !AppState.logs.some(l => l.id === item.id && l.date === selectedDate));
+      }
 
       if (items.length === 0) {
         container.innerHTML = '<div class="empty-state">No scheduled items. Tap an option above to create one.</div>';
         return;
       }
 
-      // Sort Chronologically
       items.sort((a, b) => a.rawMinutes - b.rawMinutes);
 
       items.forEach(item => {
@@ -400,6 +469,59 @@
       renderSchedule();
     }
 
+    // Reminder Timer Engine (Evaluates due reminders every 15 seconds)
+    function checkDueReminders() {
+      const now = new Date();
+      const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const today = getTodayString();
+
+      AppState.reminders.forEach(rem => {
+        if (rem.time === currentHHMM && rem.lastTriggered !== `${today}_${currentHHMM}`) {
+          rem.lastTriggered = `${today}_${currentHHMM}`;
+          AppState.save();
+          triggerReminderAlert(rem);
+        }
+      });
+    }
+
+    function triggerReminderAlert(rem) {
+      activeAlertReminder = rem;
+
+      // Play Sound
+      playDingSound();
+
+      // Show System Notification if permitted
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification("Care Daily Reminder", { body: rem.text });
+      }
+
+      // Show In-App Modal Alert
+      document.getElementById('alert-title').innerText = rem.text;
+      document.getElementById('alert-sub').innerText = `Scheduled for ${rem.time}`;
+      openModal('modal-alert');
+    }
+
+    function snoozeReminder(minutes) {
+      if (!activeAlertReminder) return;
+
+      const [h, m] = activeAlertReminder.time.split(':').map(Number);
+      const d = new Date();
+      d.setHours(h, m + minutes, 0, 0);
+
+      const snoozedHHMM = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      activeAlertReminder.time = snoozedHHMM;
+      AppState.save();
+
+      closeModal('modal-alert');
+      activeAlertReminder = null;
+      renderSchedule();
+    }
+
+    function dismissAlert() {
+      closeModal('modal-alert');
+      activeAlertReminder = null;
+    }
+
     function renderHistory() {
       const container = document.getElementById('history-list');
       const query = (document.getElementById('history-search').value || '').toLowerCase();
@@ -415,11 +537,10 @@
       filtered.reverse().forEach(log => {
         const div = document.createElement('div');
         div.className = 'schedule-item';
-        const formattedTime = new Date(log.timestamp).toLocaleString();
         div.innerHTML = `
           <div>
             <div class="item-title">${log.title}</div>
-            <div class="item-sub">Completed: ${formattedTime}</div>
+            <div class="item-sub">Completed: ${new Date(log.timestamp).toLocaleString()}</div>
           </div>
         `;
         container.appendChild(div);
@@ -466,7 +587,9 @@
       }
     }
 
-    // Initial load
+    // Check due reminders every 15 seconds
+    setInterval(checkDueReminders, 15000);
+
     renderSchedule();
   </script>
 </body>
