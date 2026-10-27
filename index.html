@@ -46,7 +46,7 @@
     .item-title { font-weight: 600; font-size: 0.95rem; }
     .item-title.completed { text-decoration: line-through; color: var(--text-muted); }
     .item-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem; }
-    .item-notes { font-size: 0.825rem; color: #475569; background: #f8fafc; padding: 0.4rem 0.6rem; border-radius: 6px; border-left: 3px solid var(--primary); margin-top: 0.4rem; }
+    .item-notes { font-size: 0.825rem; color: #475569; background: #f8fafc; padding: 0.4rem 0.6rem; border-radius: 6px; border-left: 3px solid var(--primary); margin-top: 0.4rem; white-space: pre-wrap; }
 
     .edit-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); cursor: pointer; }
     .edit-btn:active { background: #f1f5f9; }
@@ -214,8 +214,8 @@
       document.getElementById('task-modal-title').innerText = 'Edit Task';
       document.getElementById('task-edit-id').value = task.id;
       document.getElementById('task-name').value = task.name;
-      document.getElementById('task-time').value = task.time;
-      document.getElementById('task-duration').value = task.duration || 15;
+      document.getElementById('task-time').value = task.time || '09:00';
+      document.getElementById('task-duration').value = task.duration !== undefined ? task.duration : 15;
       document.getElementById('task-notes').value = task.notes || '';
       document.getElementById('task-delete-btn').style.display = 'block';
       openModal('modal-task');
@@ -224,13 +224,12 @@
     function saveTask(e) {
       e.preventDefault();
       const editId = document.getElementById('task-edit-id').value;
-      const name = document.getElementById('task-name').value;
-      const time = document.getElementById('task-time').value;
+      const name = document.getElementById('task-name').value.trim();
+      const time = document.getElementById('task-time').value || '09:00';
       const duration = parseInt(document.getElementById('task-duration').value) || 0;
       const notes = document.getElementById('task-notes').value.trim();
 
       if (editId) {
-        // Edit existing task
         const task = AppState.tasks.find(t => t.id === editId);
         if (task) {
           task.name = name;
@@ -239,7 +238,6 @@
           task.notes = notes;
         }
       } else {
-        // Create new task
         AppState.tasks.push({
           id: 'task_' + Date.now(),
           name: name,
@@ -264,6 +262,28 @@
       }
     }
 
+    // Helper to format 24h time ("14:30") to 12h display ("2:30 PM")
+    function format12Hour(timeStr) {
+      if (!timeStr) return '';
+      const parts = timeStr.split(':');
+      let hours = parseInt(parts[0], 10);
+      const minutes = parts[1] || '00';
+      if (isNaN(hours)) return timeStr;
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      return `${hours}:${minutes} ${ampm}`;
+    }
+
+    // Safely parse "HH:MM" into total minutes from midnight for sorting
+    function parseToMinutes(timeStr) {
+      if (!timeStr || typeof timeStr !== 'string') return 0;
+      const parts = timeStr.split(':');
+      const h = parseInt(parts[0], 10) || 0;
+      const m = parseInt(parts[1], 10) || 0;
+      return h * 60 + m;
+    }
+
     function renderSchedule() {
       const selectedDate = document.getElementById('schedule-date').value || getTodayString();
       const hideCompleted = document.getElementById('hide-completed-toggle').checked;
@@ -273,15 +293,16 @@
       let items = [];
 
       AppState.tasks.forEach(task => {
-        const [h, m] = task.time.split(':').map(Number);
+        const taskTime = task.time || '09:00';
         items.push({
           id: `${task.id}_${selectedDate}`,
           taskId: task.id,
           title: task.name,
-          time: task.time,
+          time: taskTime,
+          timeDisplay: format12Hour(taskTime),
           duration: task.duration,
           notes: task.notes || '',
-          rawMinutes: h * 60 + m
+          rawMinutes: parseToMinutes(taskTime)
         });
       });
 
@@ -300,19 +321,32 @@
         const isLogged = AppState.logs.some(l => l.id === item.id && l.date === selectedDate);
         const div = document.createElement('div');
         div.className = 'schedule-item';
+        
+        // Escape quotes safely for inline HTML attributes
+        const safeTitle = item.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        
         div.innerHTML = `
           <div class="item-left">
-            <input type="checkbox" class="item-checkbox" ${isLogged ? 'checked' : ''} onchange="toggleCheck('${item.id}', '${item.title.replace(/'/g, "\\'")}', '${selectedDate}', this.checked)">
+            <input type="checkbox" class="item-checkbox" ${isLogged ? 'checked' : ''} onchange="toggleCheck('${item.id}', '${safeTitle}', '${selectedDate}', this.checked)">
             <div style="flex:1;">
-              <div class="item-title ${isLogged ? 'completed' : ''}">${item.title}</div>
-              <div class="item-sub">${item.time}${item.duration ? ' • ' + item.duration + ' mins' : ''}</div>
-              ${item.notes ? `<div class="item-notes">${item.notes}</div>` : ''}
+              <div class="item-title ${isLogged ? 'completed' : ''}">${escapeHtml(item.title)}</div>
+              <div class="item-sub">${item.timeDisplay}${item.duration ? ' • ' + item.duration + ' mins' : ''}</div>
+              ${item.notes ? `<div class="item-notes">${escapeHtml(item.notes)}</div>` : ''}
             </div>
           </div>
           <button class="edit-btn" onclick="openEditTaskModal('${item.taskId}')">Edit</button>
         `;
         container.appendChild(div);
       });
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
     }
 
     function toggleCheck(id, title, date, checked) {
@@ -342,12 +376,12 @@
         return;
       }
 
-      filtered.reverse().forEach(log => {
+      filtered.slice().reverse().forEach(log => {
         const div = document.createElement('div');
         div.className = 'schedule-item';
         div.innerHTML = `
           <div>
-            <div class="item-title">${log.title}</div>
+            <div class="item-title">${escapeHtml(log.title)}</div>
             <div class="item-sub">Completed: ${new Date(log.timestamp).toLocaleString()}</div>
           </div>
         `;
