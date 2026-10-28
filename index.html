@@ -220,7 +220,7 @@
         <div class="form-row">
           <div class="form-group" style="flex: 3;">
             <label>Task Description</label>
-            <input type="text" id="task-name" name="task_title_no_autofill" required placeholder="e.g. Light Stretch" list="task-suggestions" autocomplete="off" autocorrect="off" spellcheck="false">
+            <input type="text" id="task-name" name="task_description_entry" required placeholder="e.g. Light Stretch" list="task-suggestions" autocomplete="off" autocorrect="on" autocapitalize="sentences" spellcheck="true" inputmode="text">
             <datalist id="task-suggestions"></datalist>
           </div>
           <div class="form-group" style="flex: 1;">
@@ -320,7 +320,6 @@
     function checkWeeklyBackupReminder() {
       const banner = document.getElementById('weekly-backup-banner');
       if (!AppState.lastExportDate) {
-        // If never exported and user has tasks, prompt after 7 days
         banner.style.display = 'flex';
         return;
       }
@@ -751,7 +750,6 @@
       const fileName = `care_daily_tasks_backup_${getTodayString()}.json`;
       const jsonText = JSON.stringify(AppState, null, 2);
 
-      // Record export timestamp to dismiss 7-day reminder
       AppState.lastExportDate = new Date().toISOString();
       AppState.save();
       document.getElementById('weekly-backup-banner').style.display = 'none';
