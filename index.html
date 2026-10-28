@@ -278,6 +278,18 @@
   </div>
 
   <script>
+    // Helper: Format Date Object to YYYY-MM-DD
+    function formatDate(dateObj) {
+      if (!dateObj || !(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
+        dateObj = new Date();
+      }
+      return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+    }
+
+    function getTodayString() {
+      return formatDate(new Date());
+    }
+
     const AppState = {
       tasks: JSON.parse(localStorage.getItem('care_tasks') || '[]'),
       logs: JSON.parse(localStorage.getItem('care_logs') || '[]'),
@@ -290,20 +302,13 @@
       }
     };
 
-    function getTodayString() {
-      const d = new Date();
-      return formatDate(d);
-    }
-
-    function formatDate(dateObj) {
-      return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
-    }
-
+    // Safely set top date navigation bar value on page launch
     document.getElementById('schedule-date').value = getTodayString();
 
     function shiftDate(offsetDays) {
       const input = document.getElementById('schedule-date');
-      const parts = (input.value || getTodayString()).split('-').map(Number);
+      const val = input.value || getTodayString();
+      const parts = val.split('-').map(Number);
       const curr = new Date(parts[0], parts[1] - 1, parts[2]);
       curr.setDate(curr.getDate() + offsetDays);
       input.value = formatDate(curr);
@@ -361,7 +366,6 @@
       document.getElementById('task-time').value = '09:00';
       document.getElementById('task-duration').value = 15;
 
-      // Default "Repeats Daily" unchecked
       document.getElementById('task-repeat').checked = false;
       document.getElementById('task-notes').value = '';
       document.getElementById('edit-actions-row').style.display = 'none';
@@ -462,7 +466,7 @@
 
       AppState.save();
       closeModal('modal-task');
-      renderSchedule(); // Keeps the user on the date they were currently viewing
+      renderSchedule();
     }
 
     function moveTaskToTomorrow() {
@@ -477,7 +481,7 @@
         tomorrow.setDate(tomorrow.getDate() + 1);
 
         task.specificDate = formatDate(tomorrow);
-        task.repeatDaily = false; // Move to specific tomorrow date
+        task.repeatDaily = false;
         AppState.save();
       }
 
@@ -690,4 +694,89 @@
 
     function renderHistory() {
       const container = document.getElementById('history-list');
-      const query = (document.getElementById('
+      const query = (document.getElementById('history-search').value || '').toLowerCase();
+      container.innerHTML = '';
+
+      const filtered = AppState.logs.filter(l => l.title.toLowerCase().includes(query));
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="empty-state">No completion logs found.</div>';
+        return;
+      }
+
+      filtered.slice().reverse().forEach(log => {
+        const div = document.createElement('div');
+        div.className = 'schedule-item';
+        div.innerHTML = `
+          <div>
+            <div class="item-title">${escapeHtml(log.title)}</div>
+            <div class="item-sub">Completed: ${new Date(log.timestamp).toLocaleString()}</div>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    async function exportData() {
+      const fileName = `care_daily_tasks_backup_${getTodayString()}.json`;
+      const jsonText = JSON.stringify(AppState, null, 2);
+
+      if (navigator.canShare && navigator.share) {
+        try {
+          const file = new File([jsonText], fileName, { type: 'application/json' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: 'Care Daily Backup',
+              text: 'Care Daily Tasks Backup File'
+            });
+            return;
+          }
+        } catch (err) {}
+      }
+
+      const blob = new Blob([jsonText], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function importData(e) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        try {
+          const imported = JSON.parse(event.target.result);
+          if (imported.tasks) {
+            AppState.tasks = imported.tasks || [];
+            AppState.logs = imported.logs || [];
+            AppState.historyTitles = imported.historyTitles || [];
+            AppState.save();
+            renderSchedule();
+            alert('Data imported successfully!');
+          }
+        } catch (err) {
+          alert('Invalid JSON file format.');
+        }
+      };
+      reader.readAsText(e.target.files[0]);
+    }
+
+    function clearAllData() {
+      if (confirm('Are you sure you want to clear all tasks and history?')) {
+        localStorage.clear();
+        AppState.tasks = [];
+        AppState.logs = [];
+        AppState.historyTitles = [];
+        renderSchedule();
+      }
+    }
+
+    renderSchedule();
+  </script>
+</body>
+</html>
