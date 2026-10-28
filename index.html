@@ -106,7 +106,6 @@
     .form-row { display: flex; gap: 0.75rem; }
     .form-row .form-group { flex: 1; min-width: 0; }
 
-    /* Apple Reminders-style Toggle Switches */
     .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid var(--border); margin-bottom: 0.75rem; }
     .toggle-label { font-size: 0.9rem; font-weight: 600; color: var(--text); }
     
@@ -211,7 +210,7 @@
           </div>
         </div>
 
-        <!-- Apple Reminders Style Toggle: Date -->
+        <!-- Toggle: Specific Date -->
         <div class="toggle-row">
           <span class="toggle-label">Specific Date</span>
           <label class="switch">
@@ -226,7 +225,7 @@
           </div>
         </div>
 
-        <!-- Apple Reminders Style Toggle: Time -->
+        <!-- Toggle: Specific Time -->
         <div class="toggle-row">
           <span class="toggle-label">Specific Time & Duration</span>
           <label class="switch">
@@ -320,15 +319,17 @@
 
     function openNewTaskModal() {
       updateTaskDatalist();
+      const currentSelectedDate = document.getElementById('schedule-date').value || getTodayString();
+
       document.getElementById('task-modal-title').innerText = 'Add Task';
       document.getElementById('task-edit-id').value = '';
       document.getElementById('task-name').value = '';
       document.getElementById('task-priority').value = AppState.tasks.length + 1;
       
-      // Reset Date & Time toggles
+      // Pre-fill date picker to currently selected timeline date
       document.getElementById('toggle-date').checked = false;
       toggleCollapsible('date-container', false);
-      document.getElementById('task-date').value = getTodayString();
+      document.getElementById('task-date').value = currentSelectedDate;
 
       document.getElementById('toggle-time').checked = false;
       toggleCollapsible('time-container', false);
@@ -351,13 +352,11 @@
       document.getElementById('task-name').value = task.name;
       document.getElementById('task-priority').value = task.priority || 1;
 
-      // Date toggle setup
       const hasDate = !!task.specificDate;
       document.getElementById('toggle-date').checked = hasDate;
       toggleCollapsible('date-container', hasDate);
       document.getElementById('task-date').value = task.specificDate || getTodayString();
 
-      // Time toggle setup
       const hasTime = !!task.hasSpecificTime;
       document.getElementById('toggle-time').checked = hasTime;
       toggleCollapsible('time-container', hasTime);
@@ -371,13 +370,9 @@
     }
 
     function insertPriorityAndShift(taskToInsert, targetPriority) {
-      // Filter out target task if editing
       AppState.tasks = AppState.tasks.filter(t => t.id !== taskToInsert.id);
-      
-      // Sort existing tasks by priority
       AppState.tasks.sort((a, b) => (a.priority || 0) - (b.priority || 0));
 
-      // Re-index list and insert at target position
       let newTasks = [];
       let inserted = false;
       let currentPos = 1;
@@ -413,7 +408,12 @@
       const rawTime = hasSpecificTime ? document.getElementById('task-time').value : '09:00';
       const duration = hasSpecificTime ? (parseInt(document.getElementById('task-duration').value) || 0) : null;
 
-      const repeatDaily = document.getElementById('task-repeat').checked;
+      // If specific date is set without repeating, override repeat to false
+      let repeatDaily = document.getElementById('task-repeat').checked;
+      if (hasSpecificDate && !hasSpecificTime) {
+        // Keeps user choice, but ensures logic checks specific date
+      }
+
       const notes = document.getElementById('task-notes').value.trim();
       const normalizedTime = normalizeTimeToHHMM(rawTime || '09:00');
 
@@ -425,7 +425,7 @@
       if (editId) {
         taskObj = AppState.tasks.find(t => t.id === editId) || {};
       } else {
-        taskObj = { id: 'task_' + Date.now(), createdDate: getTodayString() };
+        taskObj = { id: 'task_' + Date.now(), createdDate: document.getElementById('schedule-date').value || getTodayString() };
       }
 
       taskObj.name = name;
@@ -440,6 +440,12 @@
 
       AppState.save();
       closeModal('modal-task');
+      
+      // If a specific future date was entered, navigate schedule view to that date automatically
+      if (hasSpecificDate && specificDate) {
+        document.getElementById('schedule-date').value = specificDate;
+      }
+      
       renderSchedule();
     }
 
@@ -447,7 +453,6 @@
       const editId = document.getElementById('task-edit-id').value;
       if (editId && confirm('Are you sure you want to delete this task?')) {
         AppState.tasks = AppState.tasks.filter(t => t.id !== editId);
-        // Re-index priorities
         AppState.tasks.sort((a, b) => (a.priority || 0) - (b.priority || 0));
         AppState.tasks.forEach((t, i) => t.priority = i + 1);
         AppState.save();
@@ -497,10 +502,23 @@
 
       AppState.tasks.forEach(task => {
         const isRecurring = task.repeatDaily !== false;
-        const matchesDate = task.specificDate ? (task.specificDate === selectedDate) : true;
         const taskCreated = task.createdDate || '2000-01-01';
+        
+        // Match logic:
+        // 1. If task has a specific date set, only show on that date.
+        // 2. If task has no specific date and repeats daily, show on or after its creation date.
+        // 3. If task has no specific date and doesn't repeat, show only on its creation date.
+        let isVisible = false;
 
-        if ((isRecurring || taskCreated === selectedDate) && matchesDate) {
+        if (task.specificDate) {
+          isVisible = (task.specificDate === selectedDate);
+        } else if (isRecurring) {
+          isVisible = (selectedDate >= taskCreated);
+        } else {
+          isVisible = (selectedDate === taskCreated);
+        }
+
+        if (isVisible) {
           items.push({
             id: `${task.id}_${selectedDate}`,
             taskId: task.id,
@@ -509,7 +527,7 @@
             hasTime: !!task.hasSpecificTime,
             timeDisplay: task.hasSpecificTime ? format12Hour(task.time) : '',
             duration: task.duration,
-            repeatDaily: isRecurring,
+            repeatDaily: isRecurring && !task.specificDate,
             notes: task.notes || ''
           });
         }
@@ -524,7 +542,6 @@
         return;
       }
 
-      // Sort strictly by Priority number
       items.sort((a, b) => a.priority - b.priority);
 
       items.forEach((item, index) => {
@@ -558,7 +575,6 @@
       });
     }
 
-    // Touch & Mouse Drag-to-Reorder Engine
     let activeDragEl = null;
     let dragStartY = 0;
 
@@ -601,7 +617,6 @@
       window.removeEventListener('pointermove', onDragMove);
       window.removeEventListener('pointerup', onDragEnd);
 
-      // Re-index priorities from DOM order
       const container = document.getElementById('schedule-list');
       const itemElements = [...container.querySelectorAll('.schedule-item')];
 
