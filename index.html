@@ -43,7 +43,11 @@
 
     main { max-width: 600px; margin: 1rem auto; padding: 0 1rem; }
     
-    /* Centered Date Header Navigation Bar */
+    /* Backup Alert Banner */
+    .backup-banner { background: #e0f2fe; border: 1px solid #bae6fd; color: #0369a1; padding: 0.85rem 1rem; border-radius: 12px; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; font-size: 0.85rem; font-weight: 600; }
+    .backup-banner button { background: #0284c7; color: white; border: none; padding: 0.4rem 0.75rem; border-radius: 6px; font-weight: 600; font-size: 0.8rem; cursor: pointer; flex-shrink: 0; }
+    .backup-banner button:active { background: #0369a1; }
+
     .date-nav-bar { display: flex; align-items: center; justify-content: space-between; background: var(--card-bg); padding: 0.6rem 0.8rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 1rem; }
     .date-nav-btn { background: #f1f5f9; border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem 0.75rem; font-size: 1.1rem; font-weight: 700; color: var(--primary); cursor: pointer; }
     .date-nav-btn:active { background: #e2e8f0; }
@@ -150,6 +154,12 @@
   </header>
 
   <main id="tab-schedule">
+    <!-- Weekly Backup Reminder Banner -->
+    <div id="weekly-backup-banner" class="backup-banner" style="display:none;">
+      <span>Export and save a backup of your app data to Files</span>
+      <button onclick="exportData()">Backup Now</button>
+    </div>
+
     <div class="date-nav-bar">
       <button class="date-nav-btn" onclick="shiftDate(-1)">&lt;</button>
       <div class="date-display-wrapper">
@@ -209,8 +219,8 @@
         
         <div class="form-row">
           <div class="form-group" style="flex: 3;">
-            <label>Task Name</label>
-            <input type="text" id="task-name" required placeholder="e.g. Light Stretch" list="task-suggestions" autocomplete="off">
+            <label>Task Description</label>
+            <input type="text" id="task-name" name="task_title_no_autofill" required placeholder="e.g. Light Stretch" list="task-suggestions" autocomplete="off" autocorrect="off" spellcheck="false">
             <datalist id="task-suggestions"></datalist>
           </div>
           <div class="form-group" style="flex: 1;">
@@ -278,7 +288,6 @@
   </div>
 
   <script>
-    // Helper: Format Date Object to YYYY-MM-DD
     function formatDate(dateObj) {
       if (!dateObj || !(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
         dateObj = new Date();
@@ -294,16 +303,38 @@
       tasks: JSON.parse(localStorage.getItem('care_tasks') || '[]'),
       logs: JSON.parse(localStorage.getItem('care_logs') || '[]'),
       historyTitles: JSON.parse(localStorage.getItem('care_history_titles') || '[]'),
+      lastExportDate: localStorage.getItem('care_last_export_date') || null,
 
       save() {
         localStorage.setItem('care_tasks', JSON.stringify(this.tasks));
         localStorage.setItem('care_logs', JSON.stringify(this.logs));
         localStorage.setItem('care_history_titles', JSON.stringify(this.historyTitles));
+        if (this.lastExportDate) {
+          localStorage.setItem('care_last_export_date', this.lastExportDate);
+        }
       }
     };
 
-    // Safely set top date navigation bar value on page launch
     document.getElementById('schedule-date').value = getTodayString();
+
+    function checkWeeklyBackupReminder() {
+      const banner = document.getElementById('weekly-backup-banner');
+      if (!AppState.lastExportDate) {
+        // If never exported and user has tasks, prompt after 7 days
+        banner.style.display = 'flex';
+        return;
+      }
+
+      const lastExport = new Date(AppState.lastExportDate);
+      const now = new Date();
+      const diffDays = (now - lastExport) / (1000 * 60 * 60 * 24);
+
+      if (diffDays >= 7) {
+        banner.style.display = 'flex';
+      } else {
+        banner.style.display = 'none';
+      }
+    }
 
     function shiftDate(offsetDays) {
       const input = document.getElementById('schedule-date');
@@ -533,6 +564,7 @@
     }
 
     function renderSchedule() {
+      checkWeeklyBackupReminder();
       const selectedDate = document.getElementById('schedule-date').value || getTodayString();
       const hideCompleted = document.getElementById('hide-completed-toggle').checked;
       const container = document.getElementById('schedule-list');
@@ -612,7 +644,6 @@
     }
 
     let activeDragEl = null;
-    let dragStartY = 0;
 
     function startDrag(e, handleEl) {
       e.preventDefault();
@@ -621,7 +652,6 @@
 
       activeDragEl = itemEl;
       itemEl.classList.add('dragging');
-      dragStartY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
 
       window.addEventListener('pointermove', onDragMove);
       window.addEventListener('pointerup', onDragEnd);
@@ -721,6 +751,11 @@
       const fileName = `care_daily_tasks_backup_${getTodayString()}.json`;
       const jsonText = JSON.stringify(AppState, null, 2);
 
+      // Record export timestamp to dismiss 7-day reminder
+      AppState.lastExportDate = new Date().toISOString();
+      AppState.save();
+      document.getElementById('weekly-backup-banner').style.display = 'none';
+
       if (navigator.canShare && navigator.share) {
         try {
           const file = new File([jsonText], fileName, { type: 'application/json' });
@@ -755,6 +790,7 @@
             AppState.tasks = imported.tasks || [];
             AppState.logs = imported.logs || [];
             AppState.historyTitles = imported.historyTitles || [];
+            AppState.lastExportDate = new Date().toISOString();
             AppState.save();
             renderSchedule();
             alert('Data imported successfully!');
@@ -772,6 +808,7 @@
         AppState.tasks = [];
         AppState.logs = [];
         AppState.historyTitles = [];
+        AppState.lastExportDate = null;
         renderSchedule();
       }
     }
