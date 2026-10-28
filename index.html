@@ -43,8 +43,12 @@
 
     main { max-width: 600px; margin: 1rem auto; padding: 0 1rem; }
     
-    .date-picker-bar { display: flex; align-items: center; justify-content: space-between; background: var(--card-bg); padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 1rem; }
-    .date-picker-bar input { border: 1px solid var(--border); padding: 0.5rem; border-radius: 8px; font-size: 0.95rem; font-family: inherit; background: #fff; }
+    /* Centered Date Header Navigation Bar */
+    .date-nav-bar { display: flex; align-items: center; justify-content: space-between; background: var(--card-bg); padding: 0.6rem 0.8rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 1rem; }
+    .date-nav-btn { background: #f1f5f9; border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem 0.75rem; font-size: 1.1rem; font-weight: 700; color: var(--primary); cursor: pointer; }
+    .date-nav-btn:active { background: #e2e8f0; }
+    .date-display-wrapper { text-align: center; }
+    .date-display-wrapper input[type="date"] { border: none; background: transparent; font-size: 1rem; font-weight: 700; color: var(--text); font-family: inherit; text-align: center; cursor: pointer; }
 
     .schedule-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; font-size: 0.85rem; color: var(--text-muted); }
 
@@ -125,7 +129,9 @@
     .submit-btn { width: 100%; background: var(--primary); color: white; border: none; padding: 0.8rem; border-radius: 8px; font-weight: 600; font-size: 0.95rem; cursor: pointer; margin-top: 0.5rem; }
     .submit-btn:active { background: var(--primary-hover); }
 
-    .delete-btn { width: 100%; background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 0.6rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; margin-top: 0.5rem; }
+    .secondary-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+    .move-btn { flex: 1; background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; padding: 0.6rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+    .delete-btn { flex: 1; background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 0.6rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
 
     .empty-state { text-align: center; padding: 2rem 1rem; color: var(--text-muted); font-size: 0.9rem; }
   </style>
@@ -144,9 +150,12 @@
   </header>
 
   <main id="tab-schedule">
-    <div class="date-picker-bar">
-      <span style="font-weight:600; font-size:0.9rem;">Selected Date:</span>
-      <input type="date" id="schedule-date" onchange="renderSchedule()">
+    <div class="date-nav-bar">
+      <button class="date-nav-btn" onclick="shiftDate(-1)">&lt;</button>
+      <div class="date-display-wrapper">
+        <input type="date" id="schedule-date" onchange="renderSchedule()">
+      </div>
+      <button class="date-nav-btn" onclick="shiftDate(1)">&gt;</button>
     </div>
 
     <button class="action-btn" onclick="openNewTaskModal()">+ Add New Task</button>
@@ -248,7 +257,7 @@
 
         <div class="form-group" style="margin-top: 0.5rem;">
           <label class="checkbox-label">
-            <input type="checkbox" id="task-repeat" checked>
+            <input type="checkbox" id="task-repeat">
             <span>Repeats Daily</span>
           </label>
         </div>
@@ -259,7 +268,11 @@
         </div>
 
         <button type="submit" class="submit-btn">Save Task</button>
-        <button type="button" id="task-delete-btn" class="delete-btn" style="display:none;" onclick="deleteActiveTask()">Delete Task</button>
+        
+        <div class="secondary-actions" id="edit-actions-row" style="display:none;">
+          <button type="button" class="move-btn" onclick="moveTaskToTomorrow()">Move to Tomorrow</button>
+          <button type="button" class="delete-btn" onclick="deleteActiveTask()">Delete Task</button>
+        </div>
       </form>
     </div>
   </div>
@@ -279,10 +292,23 @@
 
     function getTodayString() {
       const d = new Date();
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return formatDate(d);
+    }
+
+    function formatDate(dateObj) {
+      return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
     }
 
     document.getElementById('schedule-date').value = getTodayString();
+
+    function shiftDate(offsetDays) {
+      const input = document.getElementById('schedule-date');
+      const parts = (input.value || getTodayString()).split('-').map(Number);
+      const curr = new Date(parts[0], parts[1] - 1, parts[2]);
+      curr.setDate(curr.getDate() + offsetDays);
+      input.value = formatDate(curr);
+      renderSchedule();
+    }
 
     function switchTab(tabName) {
       ['schedule', 'history', 'settings'].forEach(t => {
@@ -326,7 +352,6 @@
       document.getElementById('task-name').value = '';
       document.getElementById('task-priority').value = AppState.tasks.length + 1;
       
-      // Pre-fill date picker to currently selected timeline date
       document.getElementById('toggle-date').checked = false;
       toggleCollapsible('date-container', false);
       document.getElementById('task-date').value = currentSelectedDate;
@@ -336,9 +361,10 @@
       document.getElementById('task-time').value = '09:00';
       document.getElementById('task-duration').value = 15;
 
-      document.getElementById('task-repeat').checked = true;
+      // Default "Repeats Daily" unchecked
+      document.getElementById('task-repeat').checked = false;
       document.getElementById('task-notes').value = '';
-      document.getElementById('task-delete-btn').style.display = 'none';
+      document.getElementById('edit-actions-row').style.display = 'none';
       openModal('modal-task');
     }
 
@@ -363,9 +389,9 @@
       document.getElementById('task-time').value = normalizeTimeToHHMM(task.time || '09:00');
       document.getElementById('task-duration').value = task.duration !== undefined ? task.duration : 15;
 
-      document.getElementById('task-repeat').checked = task.repeatDaily !== false;
+      document.getElementById('task-repeat').checked = task.repeatDaily === true;
       document.getElementById('task-notes').value = task.notes || '';
-      document.getElementById('task-delete-btn').style.display = 'block';
+      document.getElementById('edit-actions-row').style.display = 'flex';
       openModal('modal-task');
     }
 
@@ -397,6 +423,7 @@
 
     function saveTask(e) {
       e.preventDefault();
+      const viewDate = document.getElementById('schedule-date').value || getTodayString();
       const editId = document.getElementById('task-edit-id').value;
       const name = document.getElementById('task-name').value.trim();
       const targetPriority = Math.max(1, parseInt(document.getElementById('task-priority').value) || 1);
@@ -408,12 +435,7 @@
       const rawTime = hasSpecificTime ? document.getElementById('task-time').value : '09:00';
       const duration = hasSpecificTime ? (parseInt(document.getElementById('task-duration').value) || 0) : null;
 
-      // If specific date is set without repeating, override repeat to false
-      let repeatDaily = document.getElementById('task-repeat').checked;
-      if (hasSpecificDate && !hasSpecificTime) {
-        // Keeps user choice, but ensures logic checks specific date
-      }
-
+      const repeatDaily = document.getElementById('task-repeat').checked;
       const notes = document.getElementById('task-notes').value.trim();
       const normalizedTime = normalizeTimeToHHMM(rawTime || '09:00');
 
@@ -425,7 +447,7 @@
       if (editId) {
         taskObj = AppState.tasks.find(t => t.id === editId) || {};
       } else {
-        taskObj = { id: 'task_' + Date.now(), createdDate: document.getElementById('schedule-date').value || getTodayString() };
+        taskObj = { id: 'task_' + Date.now(), createdDate: viewDate };
       }
 
       taskObj.name = name;
@@ -440,12 +462,26 @@
 
       AppState.save();
       closeModal('modal-task');
-      
-      // If a specific future date was entered, navigate schedule view to that date automatically
-      if (hasSpecificDate && specificDate) {
-        document.getElementById('schedule-date').value = specificDate;
+      renderSchedule(); // Keeps the user on the date they were currently viewing
+    }
+
+    function moveTaskToTomorrow() {
+      const editId = document.getElementById('task-edit-id').value;
+      if (!editId) return;
+
+      const task = AppState.tasks.find(t => t.id === editId);
+      if (task) {
+        const activeDateStr = document.getElementById('schedule-date').value || getTodayString();
+        const parts = activeDateStr.split('-').map(Number);
+        const tomorrow = new Date(parts[0], parts[1] - 1, parts[2]);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        task.specificDate = formatDate(tomorrow);
+        task.repeatDaily = false; // Move to specific tomorrow date
+        AppState.save();
       }
-      
+
+      closeModal('modal-task');
       renderSchedule();
     }
 
@@ -501,13 +537,9 @@
       let items = [];
 
       AppState.tasks.forEach(task => {
-        const isRecurring = task.repeatDaily !== false;
+        const isRecurring = task.repeatDaily === true;
         const taskCreated = task.createdDate || '2000-01-01';
         
-        // Match logic:
-        // 1. If task has a specific date set, only show on that date.
-        // 2. If task has no specific date and repeats daily, show on or after its creation date.
-        // 3. If task has no specific date and doesn't repeat, show only on its creation date.
         let isVisible = false;
 
         if (task.specificDate) {
@@ -658,89 +690,4 @@
 
     function renderHistory() {
       const container = document.getElementById('history-list');
-      const query = (document.getElementById('history-search').value || '').toLowerCase();
-      container.innerHTML = '';
-
-      const filtered = AppState.logs.filter(l => l.title.toLowerCase().includes(query));
-
-      if (filtered.length === 0) {
-        container.innerHTML = '<div class="empty-state">No completion logs found.</div>';
-        return;
-      }
-
-      filtered.slice().reverse().forEach(log => {
-        const div = document.createElement('div');
-        div.className = 'schedule-item';
-        div.innerHTML = `
-          <div>
-            <div class="item-title">${escapeHtml(log.title)}</div>
-            <div class="item-sub">Completed: ${new Date(log.timestamp).toLocaleString()}</div>
-          </div>
-        `;
-        container.appendChild(div);
-      });
-    }
-
-    async function exportData() {
-      const fileName = `care_daily_tasks_backup_${getTodayString()}.json`;
-      const jsonText = JSON.stringify(AppState, null, 2);
-
-      if (navigator.canShare && navigator.share) {
-        try {
-          const file = new File([jsonText], fileName, { type: 'application/json' });
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: 'Care Daily Backup',
-              text: 'Care Daily Tasks Backup File'
-            });
-            return;
-          }
-        } catch (err) {}
-      }
-
-      const blob = new Blob([jsonText], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-
-    function importData(e) {
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        try {
-          const imported = JSON.parse(event.target.result);
-          if (imported.tasks) {
-            AppState.tasks = imported.tasks || [];
-            AppState.logs = imported.logs || [];
-            AppState.historyTitles = imported.historyTitles || [];
-            AppState.save();
-            renderSchedule();
-            alert('Data imported successfully!');
-          }
-        } catch (err) {
-          alert('Invalid JSON file format.');
-        }
-      };
-      reader.readAsText(e.target.files[0]);
-    }
-
-    function clearAllData() {
-      if (confirm('Are you sure you want to clear all tasks and history?')) {
-        localStorage.clear();
-        AppState.tasks = [];
-        AppState.logs = [];
-        AppState.historyTitles = [];
-        renderSchedule();
-      }
-    }
-
-    renderSchedule();
-  </script>
-</body>
-</html>
+      const query = (document.getElementById('
